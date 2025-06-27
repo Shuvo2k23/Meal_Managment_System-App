@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "960259974154",
+    "project_id": "meal-management-system-3e2e2",
+    "storage_bucket": "meal-management-system-3e2e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:960259974154:android:5e9f5f1d90e294c3c46bf3",
+        "android_client_info": {
+          "package_name": "com.frameone.mealmanagement"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDsF5zVwMnnnBCG6PtYH_jPr35poSDbukk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
