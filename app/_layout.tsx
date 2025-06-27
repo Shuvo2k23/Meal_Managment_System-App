@@ -9,7 +9,8 @@ export default function RootLayout() {
       headerShown:false
   }}>
       <Stack.Screen name="screens" />
-      <Stack.Screen name="Signup" />
+      <Stack.Screen name="user" />
+      <Stack.Screen name="admin" />
     </Stack>
   );
 }
