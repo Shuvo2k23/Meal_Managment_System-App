@@ -1,50 +1,124 @@
 // components/MealSelector.tsx
-import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { auth, db } from "@/firebaseConfig";
+import { onValue, ref, set } from "firebase/database";
+import React, { useEffect, useState } from "react";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
-type Props = {
-  selectedMeals: {
-    breakfast: boolean;
-    lunch: boolean;
-    dinner: boolean;
+export default function MealSelector() {
+  const [status, setStatus] = useState("active");
+  const [selectedMeals, setSelectedMeals] = useState({
+    breakfast: false,
+    lunch: false,
+    dinner: false,
+  });
+
+  const getMealDate = () => {
+    const now = new Date();
+    const mealDate = new Date(now);
+    if (now.getHours() < 2) {
+      mealDate.setDate(now.getDate() - 1);
+    }
+    return mealDate.toISOString().split("T")[0];
   };
-  onToggle: (mealKey: "breakfast" | "lunch" | "dinner") => void;
-  disabled?: boolean;
-  title?: string;
-};
 
-export default function MealSelector({
-  selectedMeals,
-  onToggle,
-  disabled = false,
-  title = "✅ Select Your Meals",
-}: Props) {
+  const saveMealsToDatabase = async (meals: typeof selectedMeals) => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const dateKey = getMealDate();
+    const mealRef = ref(db, `users/${user.uid}/meals/${dateKey}`);
+    await set(mealRef, meals);
+  };
+
+  const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
+    const now = new Date();
+    const currentHour = now.getHours();
+
+    if (status === "blocked") {
+      Alert.alert("You are blocked", "Contact the Manager for more info.");
+      return;
+    }
+
+    if (currentHour >= 0 && currentHour < 3) {
+      Alert.alert(
+        "Meal selection is closed",
+        "You can't update meals after 12 AM. Please try again after 6 AM."
+      );
+      return;
+    }
+
+    setSelectedMeals((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      saveMealsToDatabase(updated); // Save immediately
+      return updated;
+    });
+  };
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const userRef = ref(db, "users/" + uid);
+    onValue(userRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        setStatus(data.status || "active");
+      }
+    });
+
+    const dateKey = getMealDate();
+    const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
+    onValue(mealRef, (snapshot) => {
+      const mealData = snapshot.val();
+      if (mealData) {
+        setSelectedMeals({
+          breakfast: !!mealData.breakfast,
+          lunch: !!mealData.lunch,
+          dinner: !!mealData.dinner,
+        });
+      }
+    });
+  }, []);
+
   return (
     <View style={styles.mealSelectionBox}>
-      <Text style={styles.heading}>{title}</Text>
+      <Text style={styles.heading}>✅ Select Your Meals</Text>
 
-      {["breakfast", "lunch", "dinner"].map((mealKey) => (
-        <View style={styles.mealRow} key={mealKey}>
-          <TouchableOpacity
-            style={[
-              styles.mealButton,
-              selectedMeals[mealKey as keyof typeof selectedMeals] &&
-                styles.mealButtonSelected,
-              disabled && styles.mealButtonDisabled,
-            ]}
-            onPress={() => !disabled && onToggle(mealKey as any)}
-            disabled={disabled}
-          >
-            <Text style={styles.mealButtonText}>
-              {mealKey === "breakfast"
-                ? "🍳 Breakfast"
-                : mealKey === "lunch"
-                ? "🍛 Lunch"
-                : "🍲 Dinner"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+      <View style={styles.mealRow}>
+        <TouchableOpacity
+          style={[
+            styles.mealButton,
+            selectedMeals.breakfast && styles.mealButtonSelected,
+          ]}
+          onPress={() => toggleMeal("breakfast")}
+        >
+          <Text style={styles.mealButtonText}>🍳 Breakfast</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.mealRow}>
+        <TouchableOpacity
+          style={[
+            styles.mealButton,
+            selectedMeals.lunch && styles.mealButtonSelected,
+          ]}
+          onPress={() => toggleMeal("lunch")}
+        >
+          <Text style={styles.mealButtonText}>🍛 Lunch</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.mealRow}>
+        <TouchableOpacity
+          style={[
+            styles.mealButton,
+            selectedMeals.dinner && styles.mealButtonSelected,
+          ]}
+          onPress={() => toggleMeal("dinner")}
+        >
+          <Text style={styles.mealButtonText}>🍲 Dinner</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -73,9 +147,6 @@ const styles = StyleSheet.create({
   },
   mealButtonSelected: {
     backgroundColor: "#4CAF50",
-  },
-  mealButtonDisabled: {
-    opacity: 0.5,
   },
   mealButtonText: {
     color: "#fff",
