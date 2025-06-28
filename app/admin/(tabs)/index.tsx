@@ -1,28 +1,19 @@
 
 import MealCountSummary from "@/app/components/MealCountSummary";
 import MealPriceEditor from "@/app/components/MealPriceEditor";
+import MealSelector from "@/app/components/MealSelector";
 import NoticePublisher from "@/app/components/NoticePublisher";
 import TomorrowMenuEditor from "@/app/components/TomorrowMenuEditor";
-import React, { useState } from "react";
+import React from "react";
 import { ScrollView, StyleSheet } from "react-native";
-const [selectedMeals, setSelectedMeals] = useState({
-  breakfast: false,
-  lunch: false,
-  dinner: false,
-});
 
-type Meals = { breakfast: boolean; lunch: boolean; dinner: boolean };
-
-const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
-  setSelectedMeals((prev: Meals) => ({ ...prev, [key]: !prev[key] }));
-};
 
 export default function Index() {
+
   return (
     <ScrollView style={styles.container}>
       <TomorrowMenuEditor />
-
-
+      <MealSelector/>
       <MealCountSummary />
       <NoticePublisher />
       <MealPriceEditor />
