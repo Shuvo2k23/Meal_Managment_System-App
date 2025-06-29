@@ -84,7 +84,7 @@ export default function EditUser() {
     editable={moderator !== "user"}
   />
 
-  <Text style={styles.label}>Total Meals</Text>
+  {/* <Text style={styles.label}>Total Meals</Text>
   <TextInput
     style={[
       styles.input,
@@ -94,19 +94,20 @@ export default function EditUser() {
     onChangeText={(v) => setTotmeals(Number(v))}
     keyboardType="numeric"
     editable={moderator !== "user"}
-  />
+  /> */}
 
-  <Text style={styles.label}>Role</Text>
-  <TextInput
+  
+  {(moderator === 'admin') ? <View>
+    <Text style={styles.label}>Role</Text>
+    <TextInput
     style={[
-      styles.input,
-      moderator === "user" && styles.disabledInput,
+      styles.input
     ]}
     value={role}
     onChangeText={setRole}
-    editable={moderator !== "user"}
-  />
-  
+  /></View> :  <Text > </Text>}
+
+
   <Button title="Update User" onPress={handleUpdate} />
 </View>
 

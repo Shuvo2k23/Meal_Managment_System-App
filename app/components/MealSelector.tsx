@@ -6,26 +6,17 @@ import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function MealSelector() {
   const [status, setStatus] = useState("active");
+  const dateKey = new Date().toISOString().split("T")[0];
   const [selectedMeals, setSelectedMeals] = useState({
     breakfast: false,
     lunch: false,
     dinner: false,
   });
 
-  const getMealDate = () => {
-    const now = new Date();
-    const mealDate = new Date(now);
-    if (now.getHours() < 2) {
-      mealDate.setDate(now.getDate() - 1);
-    }
-    return mealDate.toISOString().split("T")[0];
-  };
-
   const saveMealsToDatabase = async (meals: typeof selectedMeals) => {
     const user = auth.currentUser;
     if (!user) return;
 
-    const dateKey = getMealDate();
     const mealRef = ref(db, `users/${user.uid}/meals/${dateKey}`);
     await set(mealRef, meals);
   };
@@ -39,19 +30,14 @@ export default function MealSelector() {
       return;
     }
 
-    if (currentHour >= 0 && currentHour < 3) {
+    if (currentHour >= 23 || currentHour <= 5) {
       Alert.alert(
         "Meal selection is closed",
-        "You can't update meals after 12 AM. Please try again after 6 AM."
+        "You can't update meals after 11 PM. Please try again after 5 AM."
       );
       return;
     }
 
-    setSelectedMeals((prev) => {
-      const updated = { ...prev, [key]: !prev[key] };
-      saveMealsToDatabase(updated); // Save immediately
-      return updated;
-    });
   };
 
   useEffect(() => {
@@ -66,7 +52,6 @@ export default function MealSelector() {
       }
     });
 
-    const dateKey = getMealDate();
     const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
     onValue(mealRef, (snapshot) => {
       const mealData = snapshot.val();

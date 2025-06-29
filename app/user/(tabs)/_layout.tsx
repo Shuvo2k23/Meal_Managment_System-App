@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
 export default function _layout() {
@@ -5,14 +6,31 @@ export default function _layout() {
     <Tabs>
       <Tabs.Screen
         name="index"
-        options={{ title: "Dashboard" }}
+        options={{
+          title: "Dashboard",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" color={color} size={size} />
+          ),
+        }}
       />
-      {/* Uncomment these if you want to add more tabs */}
-      
       <Tabs.Screen
         name="profile"
-        options={{ title: "Profile" }}
+        options={{
+          title: "Profile",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="person-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="myMeals"
+        options={{
+          title: "My Meals",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="restaurant-outline" color={color} size={size} />
+          ),
+        }}
       />
     </Tabs>
-  )
+  );
 }

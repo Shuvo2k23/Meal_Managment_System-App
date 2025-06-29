@@ -1,23 +1,16 @@
 import MealPriceEditor from "@/app/components/MealPriceEditor";
 import MealSelector from "@/app/components/MealSelector";
+import MenuBox from "@/app/components/MenuBox";
 import { db } from "@/firebaseConfig";
 import { onValue, ref } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function Index() {
-  const [menu, setMenu] = useState({ breakfast: "", lunch: "", dinner: "" });
   const [notice, setNotice] = useState("");
   const [showNotice, setShowNotice] = useState(false);
 
   useEffect(() => {
-    // Fetch tomorrow's menu
-    const menuRef = ref(db, "menu/tomorrow");
-    onValue(menuRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) setMenu(data);
-    });
-
     // Fetch notice
     const noticeRef = ref(db, "notice");
     onValue(noticeRef, (snapshot) => {
@@ -34,12 +27,7 @@ export default function Index() {
   return (
     <ScrollView style={styles.container}>
       {/* Menu Box */}
-      <View style={styles.menuBox}>
-        <Text style={styles.heading}>🍽️ Tomorrow's Menu</Text>
-        <Text>🥚 Breakfast: {menu.breakfast || "N/A"}</Text>
-        <Text>🍛 Lunch: {menu.lunch || "N/A"}</Text>
-        <Text>🍲 Dinner: {menu.dinner || "N/A"}</Text>
-      </View>
+      <MenuBox />
 
       {/* Meal Selection */}
       <MealSelector />
@@ -71,6 +59,7 @@ export const styles = StyleSheet.create({
   noticeBox: {
     backgroundColor: "#FFF9C4",
     padding: 16,
+    marginBottom: 16,
     borderRadius: 10,
     elevation: 3,
   },
