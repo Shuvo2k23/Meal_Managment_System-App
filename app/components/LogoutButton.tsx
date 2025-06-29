@@ -7,7 +7,7 @@ export default function LogoutButton() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      router.replace("/screens/login"); // Change if your login screen path is different
+      router.replace("/auth/login"); // Change if your login screen path is different
     } catch (error: any) {
       Alert.alert("Logout Failed", error.message);
     }

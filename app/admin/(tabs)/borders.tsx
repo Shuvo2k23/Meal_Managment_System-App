@@ -73,8 +73,8 @@ export default function Borders() {
         <Text>📞 {item.phone}</Text>
         <Text>🏠 Room: {item.room}</Text>
         <Text>💰 Balance: {item.balance}</Text>
-        <Text>🍽️ Meals: {item.totmeals}</Text>
-        <Text>🔑 Role: {item.role}</Text>
+        {/* <Text>🍽️ Meals: {item.totmeals}</Text> */}
+        {/* <Text>🔑 Role: {item.role}</Text> */}
         <View style={styles.statusContainer}>
           <TouchableOpacity
             style={[
