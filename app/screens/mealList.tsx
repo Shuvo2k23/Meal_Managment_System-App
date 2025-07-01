@@ -44,9 +44,11 @@ export default function MyMeals() {
     fetchData();
   }, []);
 
+
   const totalCost = dates.reduce((sum, date) => {
     const meal = meals?.[date];
     return sum + Number(meal?.totalExpense || 0);
+
   }, 0);
 
   return (
@@ -56,6 +58,7 @@ export default function MyMeals() {
       </Text>
       {dates.map((date) => {
         const meal = meals?.[date] || {};
+
         return (
           <View key={date} style={styles.row}>
             <Text style={styles.date}>{date}</Text>

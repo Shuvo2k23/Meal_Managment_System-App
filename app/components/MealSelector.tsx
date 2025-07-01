@@ -8,12 +8,14 @@ export default function MealSelector() {
   const [updatedBalance, setUpdatedBalance] = useState(0);
   const [user, setUser] = useState<any>(null);
   const [status, setStatus] = useState("active");
+  const dateKey = new Date().toISOString().split("T")[0];
   const [selectedMeals, setSelectedMeals] = useState({
     breakfast: false,
     lunch: false,
     dinner: false,
   });
   const [prices, setPrices] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
+
 
   const fetchMealPrices = async () => {
     const priceRef = ref(db, "mealPrices"); // e.g., { breakfast: 25, lunch: 35, dinner: 30 }
@@ -40,6 +42,7 @@ export default function MealSelector() {
     const dateKey = getMealDate();
     const userRef = ref(db, `users/${uid}`);
     const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
+
 
     try {
       // Calculate total expense
@@ -114,7 +117,6 @@ export default function MealSelector() {
       }
     });
 
-    const dateKey = getMealDate();
     const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
     onValue(mealRef, (snapshot) => {
       const mealData = snapshot.val();

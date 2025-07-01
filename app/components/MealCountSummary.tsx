@@ -2,7 +2,9 @@ import { db } from "@/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { get, ref } from "firebase/database";
 import React, { useEffect, useState } from "react";
+
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 
 export default function MealCountSummary() {
   const [counts, setCounts] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
@@ -83,6 +85,7 @@ export default function MealCountSummary() {
 
       <View style={styles.totalBox}>
         <Text style={styles.totalText}>💰 Total Cost: ৳{grandTotal}</Text>
+
       </View>
     </View>
   );
