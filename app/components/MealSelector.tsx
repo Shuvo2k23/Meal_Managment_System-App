@@ -1,57 +1,120 @@
 // components/MealSelector.tsx
 import { auth, db } from "@/firebaseConfig";
-import { onValue, ref, set } from "firebase/database";
+import { get, onValue, ref, set, update } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
 export default function MealSelector() {
+  const [updatedBalance, setUpdatedBalance] = useState(0);
+  const [user, setUser] = useState<any>(null);
   const [status, setStatus] = useState("active");
-  const dateKey = new Date().toISOString().split("T")[0];
   const [selectedMeals, setSelectedMeals] = useState({
     breakfast: false,
     lunch: false,
     dinner: false,
   });
+  const [prices, setPrices] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
 
-  const saveMealsToDatabase = async (meals: typeof selectedMeals) => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const mealRef = ref(db, `users/${user.uid}/meals/${dateKey}`);
-    await set(mealRef, meals);
+  const fetchMealPrices = async () => {
+    const priceRef = ref(db, "mealPrices"); // e.g., { breakfast: 25, lunch: 35, dinner: 30 }
+    const snapshot = await get(priceRef);
+    if (snapshot.exists()) {
+      setPrices(snapshot.val());
+    }
   };
-
-  const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
+  const getMealDate = () => {
     const now = new Date();
-    const currentHour = now.getHours();
+    const mealDate = new Date(now);
+    if (now.getHours() < 2) {
+      mealDate.setDate(now.getDate() - 1);
+    }
+    return mealDate.toISOString().split("T")[0];
+  };
+   const adjustBalance = async (amount: number) => {
+    const uid = auth.currentUser?.uid;
+    const userRef = ref(db, `users/${uid}`);
+    await update(userRef, { ...user, balance: updatedBalance });
+  };
+  const saveMealsToDatabase = async (meals: typeof selectedMeals) => {
+    const uid = auth.currentUser?.uid;
+    const dateKey = getMealDate();
+    const userRef = ref(db, `users/${uid}`);
+    const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
 
+    try {
+      // Calculate total expense
+      let totalExpense = 0;
+      if (meals.breakfast) totalExpense += prices.breakfast || 0;
+      if (meals.lunch) totalExpense += prices.lunch || 0;
+      if (meals.dinner) totalExpense += prices.dinner || 0;
+      // Fetch current balance
+
+      const userSnap = await get(userRef);
+      let user = userSnap.exists() ? userSnap.val() : null;
+      let currentBalance = user ? user.balance : 0;
+
+      console.log(totalExpense, currentBalance);
+
+      // Get existing meal selection to calculate previous expense
+      const prevMealSnap = await get(mealRef);
+      const prevMeals = prevMealSnap.exists() ? prevMealSnap.val() : {};
+      let prevExpense = 0;
+      if (prevMeals.breakfast) prevExpense += prices.breakfast || 0;
+      if (prevMeals.lunch) prevExpense += prices.lunch || 0;
+      if (prevMeals.dinner) prevExpense += prices.dinner || 0;
+      console.log("Previous Expense:", prevExpense);
+
+      const updatedBalance = Number(currentBalance) + Number(prevExpense) - Number(totalExpense);
+      setUpdatedBalance(updatedBalance);
+      console.log(currentBalance,prevExpense, totalExpense, updatedBalance);
+      
+      if (updatedBalance <= 0) {
+        Alert.alert("Insufficient Balance", "Please recharge your account.");
+        return false;
+      }
+      // Update meal selection with total expense
+      await set(mealRef, {
+        ...meals,
+        totalExpense,
+      });
+      // Update user balance
+      await update(userRef, {balance: updatedBalance });
+
+      return true;
+    } catch (error) {
+      console.error("Error updating meals and balance:", error);
+      return false;
+    }
+  };
+ 
+  const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
     if (status === "blocked") {
-      Alert.alert("You are blocked", "Contact the Manager for more info.");
-      return;
+      Alert.alert("You are blocked, Contact the Manager for more info");
+    } else {
+      const updated = { ...selectedMeals, [key]: !selectedMeals[key] };
+      saveMealsToDatabase(updated).then(async (success) => {
+        if (success) {
+          setSelectedMeals(updated);
+         
+        }
+      });
     }
-
-    if (currentHour >= 23 || currentHour <= 5) {
-      Alert.alert(
-        "Meal selection is closed",
-        "You can't update meals after 11 PM. Please try again after 5 AM."
-      );
-      return;
-    }
-
   };
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-
+    fetchMealPrices();
     const userRef = ref(db, "users/" + uid);
     onValue(userRef, (snapshot) => {
       const data = snapshot.val();
+      setUser(data);
       if (data) {
         setStatus(data.status || "active");
       }
     });
 
+    const dateKey = getMealDate();
     const mealRef = ref(db, `users/${uid}/meals/${dateKey}`);
     onValue(mealRef, (snapshot) => {
       const mealData = snapshot.val();
