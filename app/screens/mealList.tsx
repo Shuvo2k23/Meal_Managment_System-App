@@ -44,17 +44,11 @@ export default function MyMeals() {
     fetchData();
   }, []);
 
-  const getDailyCost = (meal: any) => {
-    let total = 0;
-    if (meal?.breakfast) total += Number(prices.breakfast);
-    if (meal?.lunch) total += Number(prices.lunch);
-    if (meal?.dinner) total += Number(prices.dinner);
-    return total;
-  };
 
   const totalCost = dates.reduce((sum, date) => {
     const meal = meals?.[date];
-    return sum + getDailyCost(meal);
+    return sum + Number(meal?.totalExpense || 0);
+
   }, 0);
 
   return (
@@ -64,14 +58,14 @@ export default function MyMeals() {
       </Text>
       {dates.map((date) => {
         const meal = meals?.[date] || {};
-        const cost = getDailyCost(meal);
+
         return (
           <View key={date} style={styles.row}>
             <Text style={styles.date}>{date}</Text>
             <Text style={styles.meal}>🍳 {meal.breakfast ? "✅" : "❌"}</Text>
             <Text style={styles.meal}>🍛 {meal.lunch ? "✅" : "❌"}</Text>
             <Text style={styles.meal}>🍲 {meal.dinner ? "✅" : "❌"}</Text>
-            <Text style={styles.cost}>৳{cost}</Text>
+            <Text style={styles.cost}>৳{meal.totalExpense || 0}</Text>
           </View>
         );
       })}

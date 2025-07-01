@@ -10,7 +10,8 @@ const getCurrentMonthDates = () => {
   const lastDay = new Date(year, month + 1, 0).getDate();
   const dates: string[] = [];
 
-  for (let d = 1; d <= lastDay; d++) {
+
+  for (let d = 2; d <= lastDay + 1; d++) {
     const day = new Date(year, month, d).toISOString().split("T")[0];
     dates.push(day);
   }

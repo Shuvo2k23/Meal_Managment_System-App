@@ -2,8 +2,9 @@ import { db } from "@/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { get, ref } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { adjustBalancesForDate } from "../utils/adjustent";
+
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 
 export default function MealCountSummary() {
   const [counts, setCounts] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
@@ -84,27 +85,7 @@ export default function MealCountSummary() {
 
       <View style={styles.totalBox}>
         <Text style={styles.totalText}>💰 Total Cost: ৳{grandTotal}</Text>
-        <Button
-          title="Reset"
-          onPress={async () => {
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = now.getMinutes();
 
-            // Convert current time to minutes since midnight
-            const totalMinutes = hours * 60 + minutes;
-            // if (totalMinutes < 1380 || totalMinutes > 300) {
-            //   alert("Reset allowed only after 11:00 PM.");
-            //   return;
-            // }
-
-            try {
-              await adjustBalancesForDate(mealDate, prices);
-            } catch (error: any) {
-              alert(error.message || "Adjustment failed.");
-            }
-          }}
-        />
       </View>
     </View>
   );
