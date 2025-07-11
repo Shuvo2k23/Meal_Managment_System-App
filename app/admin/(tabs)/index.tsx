@@ -1,4 +1,5 @@
 
+import DepositComponent from "@/app/components/Deposite";
 import MealCountSummary from "@/app/components/MealCountSummary";
 import MealPriceEditor from "@/app/components/MealPriceEditor";
 import MealSelector from "@/app/components/MealSelector";
@@ -15,6 +16,7 @@ export default function Index() {
       <TomorrowMenuEditor />
       <MealSelector/>
       <MealCountSummary />
+      <DepositComponent/>
       <NoticePublisher />
       <MealPriceEditor />
     </ScrollView>

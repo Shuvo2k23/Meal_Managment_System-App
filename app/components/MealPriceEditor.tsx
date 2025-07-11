@@ -1,7 +1,14 @@
 import { auth, db } from "@/firebaseConfig";
 import { onValue, ref, set } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 export default function MealPriceEditor() {
   const [prices, setPrices] = useState({
@@ -10,6 +17,7 @@ export default function MealPriceEditor() {
     dinner: "",
   });
   const [role, setRole] = useState("");
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Load meal prices
@@ -38,13 +46,19 @@ export default function MealPriceEditor() {
     }
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    setLoading(true);
     const parsedPrices = {
       breakfast: Number(prices.breakfast),
       lunch: Number(prices.lunch),
       dinner: Number(prices.dinner),
     };
-    set(ref(db, "mealPrices"), parsedPrices);
+    try {
+      await set(ref(db, "mealPrices"), parsedPrices);
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -78,7 +92,15 @@ export default function MealPriceEditor() {
         editable={role === "admin"}
       />
 
-      {role === "admin" && <Button title="Save Prices" onPress={handleSave} />}
+      {role === "admin" && (
+        <View>
+          {loading ? (
+            <ActivityIndicator size="small" color="#007bff" />
+          ) : (
+             <Button title="Save Prices" onPress={handleSave} />
+          )}
+        </View>
+      )}
     </View>
   );
 }

@@ -1,8 +1,8 @@
 import { db } from "@/firebaseConfig";
 import { getAuth } from "firebase/auth";
 import { get, ref } from "firebase/database";
-import React, { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import React, { useCallback, useEffect, useState } from "react";
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 const getCurrentMonthDates = () => {
   const now = new Date();
@@ -11,7 +11,7 @@ const getCurrentMonthDates = () => {
   const dates: string[] = [];
 
   const lastDay = new Date(year, month + 1, 0).getDate();
-  for (let d = 1; d <= lastDay; d++) {
+  for (let d = 2; d <= lastDay+1; d++) {
     const day = new Date(year, month, d).toISOString().split("T")[0];
     dates.push(day);
   }
@@ -20,42 +20,47 @@ const getCurrentMonthDates = () => {
 
 export default function MyMeals() {
   const [meals, setMeals] = useState<Record<string, any>>({});
-  const [prices, setPrices] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
+  const [refreshing, setRefreshing] = useState(false);
   const dates = getCurrentMonthDates();
 
+  const fetchData = async () => {
+    const user = getAuth().currentUser;
+    if (!user) return;
+
+    const mealRef = ref(db, `users/${user.uid}/meals`);
+    const snapshot = await get(mealRef);
+    if (snapshot.exists()) {
+      setMeals(snapshot.val());
+    } else {
+      setMeals({});
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      const user = getAuth().currentUser;
-      if (!user) return;
-
-      const mealRef = ref(db, `users/${user.uid}/meals`);
-      const snapshot = await get(mealRef);
-      if (snapshot.exists()) {
-        setMeals(snapshot.val());
-      }
-
-      const priceRef = ref(db, "mealPrices");
-      const priceSnap = await get(priceRef);
-      if (priceSnap.exists()) {
-        setPrices(priceSnap.val());
-      }
-    };
-
     fetchData();
   }, []);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData().finally(() => setRefreshing(false));
+  }, []);
 
   const totalCost = dates.reduce((sum, date) => {
     const meal = meals?.[date];
     return sum + Number(meal?.totalExpense || 0);
-
   }, 0);
 
   return (
-    <ScrollView style={{ padding: 10 }}>
+    <ScrollView
+      style={{ padding: 10 }}
+      refreshControl={
+        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+      }
+    >
       <Text style={styles.heading}>
         🍽️ My Meals - {new Date().toLocaleString("default", { month: "long" })}
       </Text>
+
       {dates.map((date) => {
         const meal = meals?.[date] || {};
 
@@ -69,6 +74,7 @@ export default function MyMeals() {
           </View>
         );
       })}
+
       <View style={styles.totalRow}>
         <Text style={styles.totalText}>💰 Total Cost: ৳{totalCost}</Text>
       </View>

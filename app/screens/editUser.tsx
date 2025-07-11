@@ -1,11 +1,11 @@
 import { db } from "@/firebaseConfig";
 import { router, useLocalSearchParams } from "expo-router";
-import { onValue, ref, set } from "firebase/database";
+import { onValue, ref, update } from "firebase/database";
 import { useEffect, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
 
 export default function EditUser() {
-  const { uid,moderator } = useLocalSearchParams();
+  const { uid, moderator } = useLocalSearchParams();
 
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
@@ -15,8 +15,18 @@ export default function EditUser() {
   const [totmeals, setTotmeals] = useState(0);
   const [role, setRole] = useState("user");
   const [status, setStatus] = useState("active");
-  useEffect(() => {
 
+  const validateInputs = () => {
+    if (!name.trim()) return "Name is required.";
+    if (!room.trim() || isNaN(Number(room)))
+      return "Valid Room No is required.";
+    if (!phone.match(/^\d{11}$/)) return "Phone number must be 11 digits.";
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+      return "Invalid email format.";
+    return null;
+  };
+
+  useEffect(() => {
     const userRef = ref(db, "users/" + uid);
     onValue(userRef, (snapshot) => {
       const data = snapshot.val();
@@ -34,8 +44,12 @@ export default function EditUser() {
   }, [uid]);
 
   const handleUpdate = () => {
-
-    set(ref(db, "users/" + uid), {
+    const errorMessage = validateInputs();
+    if (errorMessage) {
+      Alert.alert("Validation Error", errorMessage);
+      return;
+    }
+    update(ref(db, "users/" + uid), {
       name,
       room,
       phone,
@@ -50,67 +64,46 @@ export default function EditUser() {
 
   return (
     <View style={styles.container}>
-  <Text style={styles.label}>Name</Text>
-  <TextInput style={styles.input} value={name} onChangeText={setName} />
+      <Text style={styles.label}>Name</Text>
+      <TextInput style={styles.input} value={name} onChangeText={setName} />
 
-  <Text style={styles.label}>Room</Text>
-  <TextInput style={styles.input} value={room} onChangeText={setRoom} />
+      <Text style={styles.label}>Room</Text>
+      <TextInput style={styles.input} value={room} onChangeText={setRoom} />
 
-  <Text style={styles.label}>Phone</Text>
-  <TextInput
-    style={styles.input}
-    value={phone}
-    onChangeText={setPhone}
-    keyboardType="phone-pad"
-  />
+      <Text style={styles.label}>Phone</Text>
+      <TextInput
+        style={styles.input}
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+      />
 
-  <Text style={styles.label}>Email</Text>
-  <TextInput
-    style={styles.input}
-    value={email}
-    onChangeText={setEmail}
-    keyboardType="email-address"
-  />
+      <Text style={styles.label}>Email</Text>
+      <TextInput
+        style={styles.input}
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+      />
 
-  <Text style={styles.label}>Balance</Text>
-  <TextInput
-    style={[
-      styles.input,
-      moderator === "user" && styles.disabledInput,
-    ]}
-    value={balance.toString()}
-    onChangeText={(v) => setBalance(Number(v))}
-    keyboardType="numeric"
-    editable={moderator !== "user"}
-  />
-
-  {/* <Text style={styles.label}>Total Meals</Text>
-  <TextInput
-    style={[
-      styles.input,
-      moderator === "user" && styles.disabledInput,
-    ]}
-    value={totmeals.toString()}
-    onChangeText={(v) => setTotmeals(Number(v))}
-    keyboardType="numeric"
-    editable={moderator !== "user"}
-  /> */}
-
-  
-  {(moderator === 'admin') ? <View>
-    <Text style={styles.label}>Role</Text>
-    <TextInput
-    style={[
-      styles.input
-    ]}
-    value={role}
-    onChangeText={setRole}
-  /></View> :  <Text > </Text>}
-
-
-  <Button title="Update User" onPress={handleUpdate} />
-</View>
-
+      <Text style={styles.label}>Balance</Text>
+      <TextInput
+        style={styles.input}
+        value={balance.toString()}
+        onChangeText={(v) => setBalance(Number(v))}
+        keyboardType="numeric" 
+        editable={false}
+      />
+      {moderator === "admin" ? (
+        <View>
+          <Text style={styles.label}>Role</Text>
+          <TextInput style={styles.input} value={role} onChangeText={setRole} />
+        </View>
+      ) : (
+        <Text> </Text>
+      )}
+      <Button title="Update User" onPress={handleUpdate} />
+    </View>
   );
 }
 
@@ -131,8 +124,7 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   disabledInput: {
-  backgroundColor: "#f0f0f0", // light gray
-  color: "#999",
-},
-
+    backgroundColor: "#f0f0f0", // light gray
+    color: "#999",
+  },
 });

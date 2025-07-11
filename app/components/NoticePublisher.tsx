@@ -1,12 +1,20 @@
 import { db } from "@/firebaseConfig";
 import { onValue, ref, set } from "firebase/database";
-import React, { useEffect, useState } from "react";
-import { Button, StyleSheet, Switch, Text, TextInput, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Button,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 export default function NoticePublisher() {
   const [text, setText] = useState("");
   const [published, setPublished] = useState(false);
-
+  const [loading, setLoading] = useState(false);
   useEffect(() => {
     const noticeRef = ref(db, "notice");
     onValue(noticeRef, (snapshot) => {
@@ -18,11 +26,17 @@ export default function NoticePublisher() {
     });
   }, []);
 
-  const handleSave = () => {
-    set(ref(db, "notice"), {
-      text,
-      published,
-    });
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await set(ref(db, "notice"), {
+        text,
+        published,
+      });
+    } catch (error) {
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,7 +53,11 @@ export default function NoticePublisher() {
         <Text>Publish</Text>
         <Switch value={published} onValueChange={setPublished} />
       </View>
-      <Button title="Save Notice" onPress={handleSave} />
+      {loading ? (
+        <ActivityIndicator size="small" color="#007bff" />
+      ) : (
+        <Button title="Save Notice" onPress={handleSave} />
+      )}
     </View>
   );
 }
