@@ -13,7 +13,7 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
 } from "react-native";
 
 export default function SignupScreen() {
@@ -24,14 +24,31 @@ export default function SignupScreen() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  const validateInputs = () => {
+    if (!name.trim()) return "Name is required.";
+    if (!room.trim() || isNaN(Number(room)))
+      return "Valid Room No is required.";
+    if (!phone.match(/^\d{11}$/)) return "Phone number must be 11 digits.";
+    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/))
+      return "Invalid email format.";
+    if (password.length < 6) return "Password must be at least 6 characters.";
+    if (password !== confirmPassword) return "Passwords do not match.";
+    return null;
+  };
+
   const handleSignup = async () => {
-    if (password !== confirmPassword) {
-      Alert.alert("Error", "Passwords do not match");
+    const errorMessage = validateInputs();
+    if (errorMessage) {
+      Alert.alert("Validation Error", errorMessage);
       return;
     }
 
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       await set(ref(db, "users/" + user.uid), {
         name,
@@ -48,8 +65,6 @@ export default function SignupScreen() {
     } catch (error: any) {
       Alert.alert("Error", error.message);
     }
-
-    // console.log("Sign up with:", name, room, phone, email, password);
   };
 
   return (
@@ -59,7 +74,10 @@ export default function SignupScreen() {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
-        <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          contentContainerStyle={styles.container}
+          keyboardShouldPersistTaps="handled"
+        >
           <Text style={styles.title}>Signup</Text>
 
           <TextInput
@@ -73,6 +91,7 @@ export default function SignupScreen() {
             value={room}
             onChangeText={setRoom}
             style={styles.input}
+            keyboardType="numeric"
           />
           <TextInput
             placeholder="Phone No"
@@ -80,6 +99,7 @@ export default function SignupScreen() {
             onChangeText={setPhone}
             style={styles.input}
             keyboardType="phone-pad"
+            maxLength={11}
           />
           <TextInput
             placeholder="Email"
@@ -87,6 +107,7 @@ export default function SignupScreen() {
             onChangeText={setEmail}
             style={styles.input}
             keyboardType="email-address"
+            autoCapitalize="none"
           />
           <TextInput
             placeholder="Password"

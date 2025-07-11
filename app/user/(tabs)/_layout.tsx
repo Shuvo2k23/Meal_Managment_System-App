@@ -31,6 +31,15 @@ export default function _layout() {
           ),
         }}
       />
+      <Tabs.Screen
+        name="MyDeposits"
+        options={{
+          title: "My Deposits",
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="wallet-outline" color={color} size={size} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

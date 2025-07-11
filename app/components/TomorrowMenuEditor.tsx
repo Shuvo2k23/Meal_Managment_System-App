@@ -1,10 +1,18 @@
 import { db } from "@/firebaseConfig";
 import { onValue, ref, set } from "firebase/database";
 import React, { useEffect, useState } from "react";
-import { Button, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 export default function TomorrowMenuEditor() {
   const [menu, setMenu] = useState({ breakfast: "", lunch: "", dinner: "" });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const menuRef = ref(db, "menu/tomorrow");
@@ -14,18 +22,45 @@ export default function TomorrowMenuEditor() {
     });
   }, []);
 
-  const handleSave = () => {
-
-    set(ref(db, "menu/tomorrow"), menu);
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      await set(ref(db, "menu/tomorrow"), menu);
+    } catch (error) {
+      console.error("Error saving menu:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.box}>
       <Text style={styles.heading}>🍽️ Tomorrow's Menu</Text>
-      <TextInput style={styles.input} placeholder="Breakfast" value={menu.breakfast} onChangeText={(v) => setMenu({ ...menu, breakfast: v })} />
-      <TextInput style={styles.input} placeholder="Lunch" value={menu.lunch} onChangeText={(v) => setMenu({ ...menu, lunch: v })} />
-      <TextInput style={styles.input} placeholder="Dinner" value={menu.dinner} onChangeText={(v) => setMenu({ ...menu, dinner: v })} />
-      <Button title="Save Menu" onPress={handleSave} />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Breakfast"
+        value={menu.breakfast}
+        onChangeText={(v) => setMenu({ ...menu, breakfast: v })}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Lunch"
+        value={menu.lunch}
+        onChangeText={(v) => setMenu({ ...menu, lunch: v })}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Dinner"
+        value={menu.dinner}
+        onChangeText={(v) => setMenu({ ...menu, dinner: v })}
+      />
+
+      {loading ? (
+        <ActivityIndicator size="small" color="#007bff" />
+      ) : (
+        <Button title="Save Menu" onPress={handleSave} disabled={loading} />
+      )}
     </View>
   );
 }
