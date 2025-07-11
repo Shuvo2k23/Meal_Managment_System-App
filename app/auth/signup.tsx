@@ -80,44 +80,61 @@ export default function SignupScreen() {
         >
           <Text style={styles.title}>Signup</Text>
 
+          <Text style={styles.label}>Name</Text>
           <TextInput
-            placeholder="Name"
+            placeholder="Enter your name"
+            placeholderTextColor="#888"
             value={name}
             onChangeText={setName}
             style={styles.input}
           />
+
+          <Text style={styles.label}>Room No</Text>
           <TextInput
-            placeholder="Room No"
+            placeholder="Enter your room number"
+            placeholderTextColor="#888"
             value={room}
             onChangeText={setRoom}
             style={styles.input}
             keyboardType="numeric"
           />
+
+          <Text style={styles.label}>Phone No</Text>
           <TextInput
-            placeholder="Phone No"
+            placeholder="Enter your phone number"
+            placeholderTextColor="#888"
             value={phone}
             onChangeText={setPhone}
             style={styles.input}
             keyboardType="phone-pad"
             maxLength={11}
           />
+
+          <Text style={styles.label}>Email</Text>
           <TextInput
-            placeholder="Email"
+            placeholder="Enter your email"
+            placeholderTextColor="#888"
             value={email}
             onChangeText={setEmail}
             style={styles.input}
             keyboardType="email-address"
             autoCapitalize="none"
           />
+
+          <Text style={styles.label}>Password</Text>
           <TextInput
-            placeholder="Password"
+            placeholder="Enter your password"
+            placeholderTextColor="#888"
             value={password}
             onChangeText={setPassword}
             style={styles.input}
             secureTextEntry
           />
+
+          <Text style={styles.label}>Confirm Password</Text>
           <TextInput
-            placeholder="Confirm Password"
+            placeholder="Re-type your password"
+            placeholderTextColor="#888"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             style={styles.input}
@@ -140,26 +157,36 @@ export default function SignupScreen() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    justifyContent: "center",
     padding: 20,
+    paddingBottom: 40,
+    backgroundColor: "#fff",
   },
   title: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
     marginBottom: 20,
     textAlign: "center",
+    marginTop:100
+  },
+  label: {
+    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
-    marginBottom: 10,
     padding: 10,
-    borderRadius: 5,
+    borderRadius: 6,
+    marginBottom: 16,
+    fontSize: 16,
+    color: "#000",
   },
   link: {
-    marginTop: 15,
-    color: "blue",
+    marginTop: 16,
+    color: "#007bff",
     textAlign: "center",
+    textDecorationLine: "underline",
   },
 });

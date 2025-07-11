@@ -1,6 +1,6 @@
 import { auth, db } from "@/firebaseConfig";
-import { signInWithEmailAndPassword } from "@firebase/auth";
 import { router } from "expo-router";
+import { signInWithEmailAndPassword } from "firebase/auth";
 import { get, ref } from "firebase/database";
 import { useState } from "react";
 import {
@@ -61,7 +61,7 @@ export default function LoginScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <Text style={styles.title}>Login</Text>
-
+          <Text style={styles.label}>Email</Text>
           <TextInput
             placeholder="Email"
             value={email}
@@ -69,14 +69,16 @@ export default function LoginScreen() {
             style={styles.input}
             keyboardType="email-address"
             autoCapitalize="none"
+            placeholderTextColor="#888"
           />
-
+          <Text style={styles.label}>Password</Text>
           <TextInput
             placeholder="Password"
             value={password}
             onChangeText={setPassword}
             style={styles.input}
             secureTextEntry
+            placeholderTextColor="#888"
           />
 
           <Button title="Login" onPress={handleLogin} />
@@ -116,5 +118,11 @@ const styles = StyleSheet.create({
     marginTop: 15,
     color: "blue",
     textAlign: "center",
+  },
+  label: {
+    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#333",
   },
 });
