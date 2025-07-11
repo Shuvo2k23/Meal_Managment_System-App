@@ -3,13 +3,13 @@ import { Picker } from "@react-native-picker/picker";
 import { get, ref, runTransaction } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import {
-    ActivityIndicator,
-    Alert,
-    Button,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
+  ActivityIndicator,
+  Alert,
+  Button,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
 } from "react-native";
 
 export default function DepositComponent() {
@@ -100,6 +100,7 @@ export default function DepositComponent() {
         keyboardType="numeric"
         value={amount}
         onChangeText={setAmount}
+        placeholderTextColor="#666"
       />
 
       <Button title="Deposit" onPress={handleDeposit} disabled={loading} />
@@ -131,6 +132,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 12,
     fontSize: 16,
+    
   },
   dropdownWrapper: {
     borderWidth: 1,
@@ -143,5 +145,6 @@ const styles = StyleSheet.create({
     height: 50,
     borderBottomWidth: 1,
     borderColor: "#eee",
+    color:"black"
   },
 });
