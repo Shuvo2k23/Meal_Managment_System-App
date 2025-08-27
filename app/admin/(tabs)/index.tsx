@@ -1,32 +1,57 @@
-
 import DepositComponent from "@/app/components/Deposite";
 import MealCountSummary from "@/app/components/MealCountSummary";
 import MealPriceEditor from "@/app/components/MealPriceEditor";
-import MealSelector from "@/app/components/MealSelector";
 import NoticePublisher from "@/app/components/NoticePublisher";
 import TomorrowMenuEditor from "@/app/components/TomorrowMenuEditor";
 import React from "react";
-import { ScrollView, StyleSheet } from "react-native";
-
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 
 export default function Index() {
-
   return (
     <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Meal Manager</Text>
+        <Text style={styles.headerSubtitle}>Admin Dashboard</Text>
+      </View>
       <TomorrowMenuEditor />
-      <MealSelector/>
       <MealCountSummary />
-      <DepositComponent/>
+      <DepositComponent />
       <NoticePublisher />
-      <MealPriceEditor />
+      <MealPriceEditor role="admin" />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    backgroundColor: "#f9f9f9",
     flex: 1,
+    backgroundColor: "#FFF8F0", // Off-white/cream background
+    paddingBottom: 20,
+  },
+  header: {
+    backgroundColor: "#FF8C42", // Orange
+    padding: 20,
+    paddingTop: 40,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#FFF",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#FFF",
+    textAlign: "center",
+    opacity: 0.9,
   },
 });
