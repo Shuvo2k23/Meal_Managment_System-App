@@ -1,22 +1,21 @@
-import { auth, db } from "@/firebaseConfig";
+import { db } from "@/firebaseConfig";
 import { onValue, ref, set } from "firebase/database";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
 } from "react-native";
 
-export default function MealPriceEditor() {
+export default function MealPriceEditor({ role }: { role: string }) {
   const [prices, setPrices] = useState({
     breakfast: "",
     lunch: "",
     dinner: "",
   });
-  const [role, setRole] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -32,18 +31,6 @@ export default function MealPriceEditor() {
         });
       }
     });
-
-    // Get current user's role
-    const user = auth.currentUser;
-    if (user) {
-      const roleRef = ref(db, "users/" + user.uid + "/role");
-      onValue(roleRef, (snapshot) => {
-        const userRole = snapshot.val();
-        if (userRole) {
-          setRole(userRole);
-        }
-      });
-    }
   }, []);
 
   const handleSave = async () => {
@@ -56,82 +43,166 @@ export default function MealPriceEditor() {
     try {
       await set(ref(db, "mealPrices"), parsedPrices);
     } catch (error) {
+      console.error("Error saving prices:", error);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={styles.box}>
-      <Text style={styles.heading}>💵 Meal Prices</Text>
-      <Text style={styles.label}>🍳 Breakfast Price</Text>
-      <TextInput
-        style={[styles.input, role === "user" && styles.disabledInput]}
-        keyboardType="numeric"
-        placeholder="Breakfast Price"
-        value={prices.breakfast}
-        onChangeText={(v) => setPrices({ ...prices, breakfast: v })}
-        editable={role === "admin"}
-      />
-      <Text style={styles.label}>🍛 Lunch Price</Text>
-      <TextInput
-        style={[styles.input, role === "user" && styles.disabledInput]}
-        keyboardType="numeric"
-        placeholder="Lunch Price"
-        value={prices.lunch}
-        onChangeText={(v) => setPrices({ ...prices, lunch: v })}
-        editable={role === "admin"}
-      />
-      <Text style={styles.label}>🍲 Dinner Price</Text>
-      <TextInput
-        style={[styles.input, role === "user" && styles.disabledInput]}
-        keyboardType="numeric"
-        placeholder="Dinner Price"
-        value={prices.dinner}
-        onChangeText={(v) => setPrices({ ...prices, dinner: v })}
-        editable={role === "admin"}
-      />
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Meal Prices</Text>
+        {role === "admin" && (
+          <View style={styles.adminBadge}>
+            <Text style={styles.adminBadgeText}>Admin</Text>
+          </View>
+        )}
+      </View>
 
-      {role === "admin" && (
-        <View>
-          {loading ? (
-            <ActivityIndicator size="small" color="#007bff" />
-          ) : (
-             <Button title="Save Prices" onPress={handleSave} />
-          )}
+      <View style={styles.content}>
+        <View style={styles.inputGroup}>
+          <View style={styles.mealHeader}>
+            <Text style={styles.mealIcon}>🍳</Text>
+            <Text style={styles.mealLabel}>Breakfast</Text>
+          </View>
+          <TextInput
+            style={[styles.input, role !== "admin" && styles.disabledInput]}
+            keyboardType="numeric"
+            placeholder="Enter price"
+            value={prices.breakfast}
+            onChangeText={(v) => setPrices({ ...prices, breakfast: v })}
+            editable={role === "admin"}
+          />
         </View>
-      )}
+
+        <View style={styles.inputGroup}>
+          <View style={styles.mealHeader}>
+            <Text style={styles.mealIcon}>🍛</Text>
+            <Text style={styles.mealLabel}>Lunch</Text>
+          </View>
+          <TextInput
+            style={[styles.input, role !== "admin" && styles.disabledInput]}
+            keyboardType="numeric"
+            placeholder="Enter price"
+            value={prices.lunch}
+            onChangeText={(v) => setPrices({ ...prices, lunch: v })}
+            editable={role === "admin"}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <View style={styles.mealHeader}>
+            <Text style={styles.mealIcon}>🍲</Text>
+            <Text style={styles.mealLabel}>Dinner</Text>
+          </View>
+          <TextInput
+            style={[styles.input, role !== "admin" && styles.disabledInput]}
+            keyboardType="numeric"
+            placeholder="Enter price"
+            value={prices.dinner}
+            onChangeText={(v) => setPrices({ ...prices, dinner: v })}
+            editable={role === "admin"}
+          />
+        </View>
+
+        {role === "admin" && (
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={handleSave}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Update Prices</Text>
+            )}
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: {
+  container: {
     backgroundColor: "#fff",
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 10,
+    margin: 16,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
+    overflow: "hidden",
   },
-  label: {
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 4,
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    backgroundColor: "#FF8C42",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
   },
-  heading: {
-    fontWeight: "bold",
+  headerText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  adminBadge: {
+    backgroundColor: "#6c757d",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  adminBadgeText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#fff",
+  },
+  content: {
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  mealHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  mealIcon: {
+    fontSize: 20,
+    marginRight: 8,
+  },
+  mealLabel: {
     fontSize: 16,
-    marginBottom: 10,
+    fontWeight: "500",
+    color: "#495057",
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
+    borderColor: "#ced4da",
+    padding: 12,
+    borderRadius: 8,
+    fontSize: 16,
+    backgroundColor: "#fff",
   },
   disabledInput: {
-    // backgroundColor: "#f0f0f0", // light gray
-    // color: "#999",
+    backgroundColor: "#f8f9fa",
+    color: "#6c757d",
+  },
+  saveButton: {
+    backgroundColor: "#0d6efd",
+    padding: 16,
+    borderRadius: 8,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  saveButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });

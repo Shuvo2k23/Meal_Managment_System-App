@@ -2,10 +2,24 @@ import { db } from "@/firebaseConfig";
 import { router, useLocalSearchParams } from "expo-router";
 import { onValue, ref, update } from "firebase/database";
 import { useEffect, useState } from "react";
-import { Alert, Button, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View
+} from "react-native";
 
 export default function EditUser() {
   const { uid, moderator } = useLocalSearchParams();
+  const [isLoading, setIsLoading] = useState(true);
 
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
@@ -40,6 +54,7 @@ export default function EditUser() {
         setRole(data.role || "user");
         setStatus(data.status || "active");
       }
+      setIsLoading(false);
     });
   }, [uid]);
 
@@ -49,82 +64,273 @@ export default function EditUser() {
       Alert.alert("Validation Error", errorMessage);
       return;
     }
-    update(ref(db, "users/" + uid), {
-      name,
-      room,
-      phone,
-      email,
-      balance,
-      totmeals,
-      role,
-      status,
-    });
-    router.back();
+    
+    Alert.alert(
+      "Confirm Update",
+      "Are you sure you want to update this user's information?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        { 
+          text: "Update", 
+          onPress: () => {
+            update(ref(db, "users/" + uid), {
+              name,
+              room,
+              phone,
+              email,
+              balance,
+              totmeals,
+              role,
+              status,
+            });
+            Alert.alert("Success", "User information updated successfully!");
+            router.back();
+          }
+        }
+      ]
+    );
   };
 
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF8C42" />
+        <Text style={styles.loadingText}>Loading user data...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.label}>Name</Text>
-      <TextInput style={styles.input} value={name} onChangeText={setName} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
+      >
+        <ScrollView 
+          style={styles.container}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Edit User Profile</Text>
+            <Text style={styles.headerSubtitle}>Update user information</Text>
+          </View>
 
-      <Text style={styles.label}>Room</Text>
-      <TextInput style={styles.input} value={room} onChangeText={setRoom} />
+          {/* Form */}
+          <View style={styles.formContainer}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Full Name</Text>
+              <TextInput 
+                style={styles.input} 
+                value={name} 
+                onChangeText={setName}
+                placeholder="Enter full name"
+                placeholderTextColor="#A9A9A9"
+              />
+            </View>
 
-      <Text style={styles.label}>Phone</Text>
-      <TextInput
-        style={styles.input}
-        value={phone}
-        onChangeText={setPhone}
-        keyboardType="phone-pad"
-      />
+            {moderator === "admin" && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Room Number</Text>
+                <TextInput 
+                  style={styles.input} 
+                  value={room} 
+                  onChangeText={setRoom}
+                  placeholder="Enter room number"
+                  placeholderTextColor="#A9A9A9"
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
 
-      <Text style={styles.label}>Email</Text>
-      <TextInput
-        style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Phone Number</Text>
+              <TextInput
+                style={styles.input}
+                value={phone}
+                onChangeText={setPhone}
+                placeholder="Enter 11-digit phone number"
+                placeholderTextColor="#A9A9A9"
+                keyboardType="phone-pad"
+                maxLength={11}
+              />
+            </View>
 
-      <Text style={styles.label}>Balance</Text>
-      <TextInput
-        style={styles.input}
-        value={balance.toString()}
-        onChangeText={(v) => setBalance(Number(v))}
-        keyboardType="numeric" 
-        editable={false}
-      />
-      {moderator === "admin" ? (
-        <View>
-          <Text style={styles.label}>Role</Text>
-          <TextInput style={styles.input} value={role} onChangeText={setRole} />
-        </View>
-      ) : (
-        <Text> </Text>
-      )}
-      <Button title="Update User" onPress={handleUpdate} />
-    </View>
+            {/* <View style={styles.inputContainer}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="Enter email address"
+                placeholderTextColor="#A9A9A9"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Account Balance</Text>
+              <TextInput
+                style={styles.input}
+                value={balance.toString()}
+                onChangeText={(text) => setBalance(Number(text))}
+                placeholder="Enter balance amount"
+                placeholderTextColor="#A9A9A9"
+                keyboardType="numeric"
+              />
+            </View> */}
+
+            {/* {moderator === "admin" && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>User Role</Text>
+                <View style={styles.pickerContainer}>
+                  <Picker
+                    selectedValue={role}
+                    onValueChange={setRole}
+                    style={styles.picker}
+                  >
+                    <Picker.Item label="User" value="user" />
+                    <Picker.Item label="Admin" value="admin" />
+                  </Picker>
+                </View>
+              </View>
+            )} */}
+
+            {/* Action Buttons */}
+            <View style={styles.actionsContainer}>
+              <TouchableOpacity style={styles.updateButton} onPress={handleUpdate}>
+                <Text style={styles.updateButtonText}>Update User</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.cancelButton} onPress={() => router.back()}>
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: "#FFF8F0", // Off-white/cream background
+  },
+  contentContainer: {
+    paddingBottom: 40,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#FFF8F0",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: "#8B4513", // Brown
+  },
+  header: {
+    backgroundColor: "#FF8C42", // Orange
     padding: 20,
+    paddingTop: 40,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: "#FFF",
+    textAlign: "center",
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 16,
+    color: "#FFF",
+    textAlign: "center",
+    opacity: 0.9,
+  },
+  formContainer: {
+    paddingHorizontal: 20,
+  },
+  inputContainer: {
+    marginBottom: 20,
   },
   label: {
-    fontWeight: "bold",
-    marginTop: 10,
-    marginBottom: 5,
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8B4513", // Brown
+    marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 5,
+    borderColor: "#E0D6C9",
+    backgroundColor: "#FFF",
+    padding: 15,
+    borderRadius: 12,
+    fontSize: 16,
+    color: "#333",
   },
-  disabledInput: {
-    backgroundColor: "#f0f0f0", // light gray
-    color: "#999",
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: "#E0D6C9",
+    backgroundColor: "#FFF",
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+  picker: {
+    height: 50,
+  },
+  actionsContainer: {
+    marginTop: 10,
+  },
+  updateButton: {
+    backgroundColor: "#FF8C42", // Orange
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  updateButtonText: {
+    color: "#FFF",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  cancelButton: {
+    backgroundColor: "#FFFFFF",
+    padding: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#8B4513", // Brown
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cancelButtonText: {
+    color: "#8B4513", // Brown
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

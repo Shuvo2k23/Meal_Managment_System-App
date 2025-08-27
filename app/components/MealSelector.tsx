@@ -81,7 +81,7 @@ export default function MealSelector() {
 
   const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
     if (status === "blocked") {
-      Alert.alert("You are blocked, Contact the Manager for more info");
+      Alert.alert("You are blocked", "Contact the Manager for more information");
       return;
     }
 
@@ -120,75 +120,142 @@ export default function MealSelector() {
   }, []);
 
   return (
-    <View style={styles.mealSelectionBox}>
-      <Text style={styles.heading}>✅ Select Your Meals</Text>
-
-      <View style={styles.mealRow}>
-        <TouchableOpacity
-          style={[
-            styles.mealButton,
-            selectedMeals.breakfast && styles.mealButtonSelected,
-          ]}
-          onPress={() => toggleMeal("breakfast")}
-        >
-          <Text style={styles.mealButtonText}>🍳 Breakfast</Text>
-        </TouchableOpacity>
+    <View style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerText}>Select Meals</Text>
+        <View style={styles.balanceContainer}>
+          <Text style={styles.balanceText}>
+            Balance: ৳{user?.balance?.toFixed(2) || "0.00"}
+          </Text>
+        </View>
       </View>
 
-      <View style={styles.mealRow}>
-        <TouchableOpacity
-          style={[
-            styles.mealButton,
-            selectedMeals.lunch && styles.mealButtonSelected,
-          ]}
-          onPress={() => toggleMeal("lunch")}
-        >
-          <Text style={styles.mealButtonText}>🍛 Lunch</Text>
-        </TouchableOpacity>
-      </View>
+      <View style={styles.mealSelectionBox}>
+        <View style={styles.mealRow}>
+          <TouchableOpacity
+            style={[
+              styles.mealButton,
+              selectedMeals.breakfast && styles.mealButtonSelected,
+            ]}
+            onPress={() => toggleMeal("breakfast")}
+          >
+            <Text style={styles.mealButtonText}>Breakfast</Text>
+            <Text style={styles.mealPriceText}>৳{prices.breakfast}</Text>
+            <Text style={styles.mealIcon}>🍳</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.mealRow}>
-        <TouchableOpacity
-          style={[
-            styles.mealButton,
-            selectedMeals.dinner && styles.mealButtonSelected,
-          ]}
-          onPress={() => toggleMeal("dinner")}
-        >
-          <Text style={styles.mealButtonText}>🍲 Dinner</Text>
-        </TouchableOpacity>
+        <View style={styles.mealRow}>
+          <TouchableOpacity
+            style={[
+              styles.mealButton,
+              selectedMeals.lunch && styles.mealButtonSelected,
+            ]}
+            onPress={() => toggleMeal("lunch")}
+          >
+            <Text style={styles.mealButtonText}>Lunch</Text>
+            <Text style={styles.mealPriceText}>৳{prices.lunch}</Text>
+            <Text style={styles.mealIcon}>🍛</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.mealRow}>
+          <TouchableOpacity
+            style={[
+              styles.mealButton,
+              selectedMeals.dinner && styles.mealButtonSelected,
+            ]}
+            onPress={() => toggleMeal("dinner")}
+          >
+            <Text style={styles.mealButtonText}>Dinner</Text>
+            <Text style={styles.mealPriceText}>৳{prices.dinner}</Text>
+            <Text style={styles.mealIcon}>🍲</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 16,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+    margin: 16,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: "#FF8C42",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  balanceContainer: {
+    backgroundColor: "#e9ecef",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  balanceText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#495057",
+  },
   mealSelectionBox: {
     backgroundColor: "#fff",
     padding: 16,
-    marginBottom: 16,
-    borderRadius: 10,
-    elevation: 3,
-  },
-  heading: {
-    fontWeight: "bold",
-    fontSize: 16,
-    marginBottom: 10,
+    margin: 16,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   mealRow: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   mealButton: {
-    backgroundColor: "#ccc",
-    paddingVertical: 10,
-    borderRadius: 8,
+    backgroundColor: "#f8f9fa",
+    padding: 16,
+    borderRadius: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e9ecef",
   },
   mealButtonSelected: {
-    backgroundColor: "#4CAF50",
+    backgroundColor: "#FFE3B8",
+    borderColor: "#FFF9E9",
   },
   mealButtonText: {
-    color: "#fff",
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#212529",
+    flex: 1,
+  },
+  mealPriceText: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#495057",
+    marginRight: 10,
+  },
+  mealIcon: {
+    fontSize: 24,
   },
 });

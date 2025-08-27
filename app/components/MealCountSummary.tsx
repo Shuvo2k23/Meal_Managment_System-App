@@ -2,13 +2,12 @@ import { db } from "@/firebaseConfig";
 import { Ionicons } from "@expo/vector-icons";
 import { get, ref } from "firebase/database";
 import React, { useEffect, useState } from "react";
-
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-
 
 export default function MealCountSummary() {
   const [counts, setCounts] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
   const [prices, setPrices] = useState({ breakfast: 0, lunch: 0, dinner: 0 });
+  const [loading, setLoading] = useState(false);
 
   const usersRef = ref(db, "users");
 
@@ -19,8 +18,11 @@ export default function MealCountSummary() {
     }
     return now.toISOString().split("T")[0];
   };
+
   const mealDate = getMealDate();
+
   const fetchMealCounts = async () => {
+    setLoading(true);
     const snapshot = await get(usersRef);
     let breakfast = 0;
     let lunch = 0;
@@ -38,10 +40,11 @@ export default function MealCountSummary() {
       }
     }
     setCounts({ breakfast, lunch, dinner });
+    setLoading(false);
   };
 
   const fetchMealPrices = async () => {
-    const priceRef = ref(db, "mealPrices"); // e.g., { breakfast: 25, lunch: 35, dinner: 30 }
+    const priceRef = ref(db, "mealPrices");
     const snapshot = await get(priceRef);
     if (snapshot.exists()) {
       setPrices(snapshot.val());
@@ -58,70 +61,217 @@ export default function MealCountSummary() {
   const totalDinnerCost = counts.dinner * prices.dinner;
   const grandTotal = totalBreakfastCost + totalLunchCost + totalDinnerCost;
 
+  interface MealRowProps {
+    icon: string;
+    mealType: string;
+    count: number;
+    price: number;
+    total: number;
+  }
+
+  const MealRow: React.FC<MealRowProps> = ({
+    icon,
+    mealType,
+    count,
+    price,
+    total,
+  }) => (
+    <View style={styles.mealRow}>
+      <View style={styles.mealInfo}>
+        <Text style={styles.mealIcon}>{icon}</Text>
+        <Text style={styles.mealLabel}>
+          {mealType.charAt(0).toUpperCase() + mealType.slice(1)}
+        </Text>
+      </View>
+
+      <View style={styles.mealDetails}>
+        <Text style={styles.mealCount}>{count}</Text>
+        <Text style={styles.multiplier}>×</Text>
+        <Text style={styles.mealPrice}>৳{price}</Text>
+        <Text style={styles.equals}>=</Text>
+        <Text style={styles.mealTotal}>৳{total}</Text>
+      </View>
+    </View>
+  );
+
   return (
-    <View style={styles.box}>
+    <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.heading}>📊 Meal Count Summary</Text>
+        <Text style={styles.headerText}>Meal Count Summary</Text>
         <TouchableOpacity
           onPress={() => {
             fetchMealCounts();
             fetchMealPrices();
           }}
+          style={styles.refreshButton}
+          disabled={loading}
         >
-          <Ionicons name="refresh" size={24} color="#4CAF50" />
+          <Ionicons
+            name="refresh"
+            size={20}
+            color={loading ? "#ccc" : "#0d6efd"}
+          />
         </TouchableOpacity>
       </View>
 
-      <Text>
-        🍳 Breakfast: {counts.breakfast} × ৳{prices.breakfast} = ৳
-        {totalBreakfastCost}
-      </Text>
-      <Text>
-        🍛 Lunch: {counts.lunch} × ৳{prices.lunch} = ৳{totalLunchCost}
-      </Text>
-      <Text>
-        🍲 Dinner: {counts.dinner} × ৳{prices.dinner} = ৳{totalDinnerCost}
+      <Text style={styles.dateText}>
+        For{" "}
+        {new Date(mealDate).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        })}
       </Text>
 
-      <View style={styles.totalBox}>
-        <Text style={styles.totalText}>💰 Total Cost: ৳{grandTotal}</Text>
+      <View style={styles.content}>
+        <MealRow
+          icon="🍳"
+          mealType="breakfast"
+          count={counts.breakfast}
+          price={prices.breakfast}
+          total={totalBreakfastCost}
+        />
 
+        <MealRow
+          icon="🍛"
+          mealType="lunch"
+          count={counts.lunch}
+          price={prices.lunch}
+          total={totalLunchCost}
+        />
+
+        <MealRow
+          icon="🍲"
+          mealType="dinner"
+          count={counts.dinner}
+          price={prices.dinner}
+          total={totalDinnerCost}
+        />
+
+        <View style={styles.divider} />
+
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalLabel}>Total Amount</Text>
+          <Text style={styles.totalAmount}>৳{grandTotal}</Text>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  box: {
+  container: {
     backgroundColor: "#fff",
-    padding: 16,
-    marginBottom: 16,
-    borderRadius: 10,
+    margin: 16,
+    borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
-  },
-  heading: {
-    fontWeight: "bold",
-    fontSize: 16,
+    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    padding: 16,
+    backgroundColor: "#FF8C42",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e9ecef",
   },
-  totalBox: {
-    flex: 1,
+  headerText: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  refreshButton: {
+    padding: 4,
+  },
+  dateText: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    color: "#6c757d",
+    fontSize: 14,
+  },
+  content: {
+    padding: 16,
+  },
+  mealRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 10,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: "#ddd",
+    marginBottom: 16,
+    padding: 12,
+    backgroundColor: "#f8f9fa",
+    borderRadius: 8,
   },
-  totalText: {
-    fontWeight: "bold",
+  mealInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  mealIcon: {
+    fontSize: 20,
+    marginRight: 12,
+  },
+  mealLabel: {
     fontSize: 16,
-    color: "#4CAF50",
+    fontWeight: "500",
+    color: "#495057",
+  },
+  mealDetails: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  mealCount: {
+    fontWeight: "600",
+    color: "#212529",
+    minWidth: 20,
+    textAlign: "right",
+  },
+  multiplier: {
+    marginHorizontal: 4,
+    color: "#6c757d",
+  },
+  mealPrice: {
+    fontWeight: "500",
+    color: "#495057",
+    minWidth: 30,
+    textAlign: "right",
+  },
+  equals: {
+    marginHorizontal: 4,
+    color: "#6c757d",
+  },
+  mealTotal: {
+    fontWeight: "600",
+    color: "#0d6efd",
+    minWidth: 40,
+    textAlign: "right",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#e9ecef",
+    marginVertical: 8,
+  },
+  totalContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    backgroundColor: "#e7f4ff",
+    borderRadius: 8,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#0a58ca",
+  },
+  totalAmount: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#0a58ca",
   },
 });

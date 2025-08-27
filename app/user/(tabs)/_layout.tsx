@@ -1,15 +1,28 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
+import { StyleSheet } from "react-native";
 
 export default function _layout() {
   return (
-    <Tabs>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: "#FF8C42", // Active icon and text color
+        tabBarInactiveTintColor: "#8B4513", // Inactive icon and text color
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabBarLabel,
+        headerShown: false, // Hide headers for all screens
+      }}
+    >
       <Tabs.Screen
         name="index"
         options={{
           title: "Dashboard",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "home" : "home-outline"} 
+              size={size} 
+              color={focused ? "#FF8C42" : color} 
+            />
           ),
         }}
       />
@@ -17,8 +30,12 @@ export default function _layout() {
         name="profile"
         options={{
           title: "Profile",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "person" : "person-outline"} 
+              size={size} 
+              color={focused ? "#FF8C42" : color} 
+            />
           ),
         }}
       />
@@ -26,8 +43,12 @@ export default function _layout() {
         name="myMeals"
         options={{
           title: "My Meals",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="restaurant-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "restaurant" : "restaurant-outline"} 
+              size={size} 
+              color={focused ? "#FF8C42" : color} 
+            />
           ),
         }}
       />
@@ -35,11 +56,30 @@ export default function _layout() {
         name="MyDeposits"
         options={{
           title: "My Deposits",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="wallet-outline" color={color} size={size} />
+          tabBarIcon: ({ color, size, focused }) => (
+            <Ionicons 
+              name={focused ? "wallet" : "wallet-outline"} 
+              size={size} 
+              color={focused ? "#FF8C42" : color} 
+            />
           ),
         }}
       />
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#E0D6C9",
+    height: 60,
+    paddingBottom: 8,
+    paddingTop: 8,
+  },
+  tabBarLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+});
