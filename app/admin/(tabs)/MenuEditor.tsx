@@ -1,3 +1,4 @@
+import { BORDER_RADIUS, COLORS, FONT_SIZES, FONT_WEIGHTS, SHADOWS, SPACING } from "@/app/constants/theme";
 import { db } from "@/firebaseConfig";
 import { get, ref, set } from "firebase/database";
 import React, { useCallback, useEffect, useState } from "react";
@@ -5,7 +6,9 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,14 +18,20 @@ import {
 } from "react-native";
 
 const DAYS = [
-  { id: "sat", label: "Saturday" },
-  { id: "sun", label: "Sunday" },
-  { id: "mon", label: "Monday" },
-  { id: "tue", label: "Tuesday" },
-  { id: "wed", label: "Wednesday" },
-  { id: "thu", label: "Thursday" },
-  { id: "fri", label: "Friday" },
+  { id: "sat", label: "Saturday", short: "SAT" },
+  { id: "sun", label: "Sunday", short: "SUN" },
+  { id: "mon", label: "Monday", short: "MON" },
+  { id: "tue", label: "Tuesday", short: "TUE" },
+  { id: "wed", label: "Wednesday", short: "WED" },
+  { id: "thu", label: "Thursday", short: "THU" },
+  { id: "fri", label: "Friday", short: "FRI" },
 ];
+
+const MEAL_TYPES = [
+  { key: "breakfast", label: "Breakfast" },
+  { key: "lunch", label: "Lunch" },
+  { key: "dinner", label: "Dinner" },
+] as const;
 
 type MealSet = {
   breakfast: string;
@@ -31,7 +40,6 @@ type MealSet = {
 };
 
 export default function MenuEditor() {
-  // initialize meals with empty strings for all days
   const [meals, setMeals] = useState<Record<string, MealSet>>(() =>
     DAYS.reduce((acc, d) => {
       acc[d.id] = { breakfast: "", lunch: "", dinner: "" };
@@ -39,26 +47,10 @@ export default function MenuEditor() {
     }, {} as Record<string, MealSet>)
   );
 
-  // keep track of which day panels are expanded; keys stable by day id
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() =>
-    DAYS.reduce((acc, d) => {
-      acc[d.id] = false;
-      return acc;
-    }, {} as Record<string, boolean>)
-  );
-
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  const toggleExpand = useCallback((dayId: string) => {
-    setExpanded((prev) => ({ ...prev, [dayId]: !prev[dayId] }));
-  }, []);
-
-  // When a TextInput is focused, ensure its day panel stays expanded
-  const handleFocus = useCallback((dayId: string) => {
-    setExpanded((prev) => (prev[dayId] ? prev : { ...prev, [dayId]: true }));
-  }, []);
-
-  // stable updater for nested meal fields
   const updateMealField = useCallback(
     (dayId: string, field: keyof MealSet, value: string) => {
       setMeals((prev) => ({
@@ -72,7 +64,6 @@ export default function MenuEditor() {
     []
   );
 
-  // Load existing menu on mount and populate inputs
   useEffect(() => {
     const menuRef = ref(db, "/menu/weekly");
     const fetchMenu = async () => {
@@ -81,13 +72,11 @@ export default function MenuEditor() {
         if (!snapshot.exists()) return;
 
         const data = snapshot.val();
-
-        // Normalize to array of entries with day property
         let entries: any[] = [];
+        
         if (Array.isArray(data)) {
           entries = data;
         } else if (data && typeof data === "object") {
-          // If stored as object keyed by day id
           entries = Object.entries(data).map(([k, v]: any) => ({
             day: k,
             ...(v || {}),
@@ -98,11 +87,7 @@ export default function MenuEditor() {
           const next = { ...prev };
           entries.forEach((e: any) => {
             const dayId = (e.day || "").toString().toLowerCase();
-            if (!dayId) return;
-            if (!next[dayId]) {
-              // If unknown day id, skip
-              return;
-            }
+            if (!dayId || !next[dayId]) return;
             next[dayId] = {
               breakfast: e.breakfast || "",
               lunch: e.lunch || "",
@@ -122,161 +107,190 @@ export default function MenuEditor() {
   const saveAll = useCallback(async () => {
     setSaving(true);
     try {
-      // Example payload; replace with your API call
       const payload = DAYS.map((d) => ({ day: d.id, ...meals[d.id] }));
-      // Save to Firebase Realtime Database
       await set(ref(db, "/menu/weekly"), payload);
-      Alert.alert("Success", "All days saved.");
+      Alert.alert("Success", "Weekly menu saved successfully!", [
+        { text: "OK", style: "default" }
+      ]);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Failed to save. Try again.");
+      Alert.alert("Error", "Failed to save menu. Please try again.");
     } finally {
       setSaving(false);
     }
   }, [meals]);
 
+  const openDayModal = (dayId: string) => {
+    setSelectedDay(dayId);
+    setModalVisible(true);
+  };
+
+  const closeDayModal = () => {
+    setModalVisible(false);
+    setTimeout(() => setSelectedDay(null), 300);
+  };
+
+  const getCompletionStatus = (dayId: string) => {
+    const dayMeals = meals[dayId];
+    const filled = [dayMeals.breakfast, dayMeals.lunch, dayMeals.dinner].filter(Boolean).length;
+    return { filled, total: 3 };
+  };
+
+  const selectedDayData = selectedDay ? DAYS.find(d => d.id === selectedDay) : null;
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
-    >
-      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
+    <View style={{ flex: 1 }}>
+      <ScrollView 
+        style={styles.container} 
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Weekly Menu Editor</Text>
           <Text style={styles.headerSubtitle}>
-            Fill meals for every day and tap Save All
+            Manage meal plans for the week
           </Text>
         </View>
-        <View style={styles.listContent}>
-          {DAYS.map((day) => {
-            const dayMeals = meals[day.id];
-            const isExpanded = expanded[day.id];
-            return (
-              <View key={day.id} style={styles.dayAccordion}>
+
+        <View style={styles.content}>
+          {/* Days Grid */}
+          <View style={styles.daysGrid}>
+            {DAYS.map((day) => {
+              const status = getCompletionStatus(day.id);
+              const isComplete = status.filled === status.total;
+              const isPartial = status.filled > 0 && status.filled < status.total;
+
+              return (
                 <TouchableOpacity
-                  onPress={() => toggleExpand(day.id)}
-                  style={styles.dayHeader}
+                  key={day.id}
+                  style={styles.dayCard}
+                  onPress={() => openDayModal(day.id)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.dayHeaderText}>{day.label}</Text>
-                  <Text style={styles.dayExpandIcon}>
-                    {isExpanded ? "−" : "+"}
+                  <View style={styles.dayCardHeader}>
+                    <Text style={styles.dayShort}>{day.short}</Text>
+                    <View style={[
+                      styles.statusIndicator,
+                      isComplete && styles.statusComplete,
+                      isPartial && styles.statusPartial,
+                    ]} />
+                  </View>
+                  <Text style={styles.dayLabel}>{day.label}</Text>
+                  <View style={styles.progressBar}>
+                    <View style={[
+                      styles.progressFill,
+                      { width: `${(status.filled / status.total) * 100}%` }
+                    ]} />
+                  </View>
+                  <Text style={styles.statusText}>
+                    {status.filled} of {status.total} meals
                   </Text>
                 </TouchableOpacity>
+              );
+            })}
+          </View>
 
-                {isExpanded && (
-                  <View style={styles.dayContent}>
-                    <View style={styles.mealContainer}>
-                      <View style={styles.mealHeader}>
-                        <Text style={styles.mealLabel}>Breakfast</Text>
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        multiline
-                        value={dayMeals.breakfast}
-                        onChangeText={(t) =>
-                          updateMealField(day.id, "breakfast", t)
-                        }
-                        onFocus={() => handleFocus(day.id)}
-                        
-                        returnKeyType="default"
-                        placeholder="Enter breakfast menu..."
-                      />
-                    </View>
-
-                    <View style={styles.mealContainer}>
-                      <View style={styles.mealHeader}>
-                        <Text style={styles.mealLabel}>Lunch</Text>
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        multiline
-                        value={dayMeals.lunch}
-                        onChangeText={(t) =>
-                          updateMealField(day.id, "lunch", t)
-                        }
-                        onFocus={() => handleFocus(day.id)}
-                        
-                        returnKeyType="default"
-                        placeholder="Enter lunch menu..."
-                      />
-                    </View>
-
-                    <View style={styles.mealContainer}>
-                      <View style={styles.mealHeader}>
-                        <Text style={styles.mealLabel}>Dinner</Text>
-                      </View>
-                      <TextInput
-                        style={styles.input}
-                        multiline
-                        value={dayMeals.dinner}
-                        onChangeText={(t) =>
-                          updateMealField(day.id, "dinner", t)
-                        }
-                        onFocus={() => handleFocus(day.id)}
-                        
-                        returnKeyType="default"
-                        placeholder="Enter dinner menu..."
-                      />
-                    </View>
-                  </View>
-                )}
-              </View>
-            );
-          })}
-
+          {/* Save Button */}
           <TouchableOpacity
             onPress={saveAll}
-            style={[
-              styles.saveButton,
-              saving ? styles.saveButtonSuccess : undefined,
-            ]}
+            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
             activeOpacity={0.8}
+            disabled={saving}
           >
-            <View style={styles.buttonContent}>
-              {saving ? (
-                <ActivityIndicator color="#fff" style={{ marginRight: 8 }} />
-              ) : null}
-              <Text style={styles.saveButtonText}>
-                {saving ? "Saving..." : "Save All Days"}
-              </Text>
-            </View>
+            {saving ? (
+              <ActivityIndicator color={COLORS.textLight} size="small" />
+            ) : (
+              <Text style={styles.saveButtonText}>Save All Changes</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+
+      {/* Day Edit Modal */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={closeDayModal}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+        >
+          <Pressable style={styles.modalBackdrop} onPress={closeDayModal} />
+          <View style={styles.modalContent}>
+            {/* Modal Header */}
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>{selectedDayData?.label}</Text>
+                <Text style={styles.modalSubtitle}>Edit meal plans</Text>
+              </View>
+              <TouchableOpacity onPress={closeDayModal} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Modal Body */}
+            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+              {selectedDay && MEAL_TYPES.map((meal) => (
+                <View key={meal.key} style={styles.mealSection}>
+                  <View style={styles.mealLabelContainer}>
+                    <Text style={styles.mealLabel}>{meal.label}</Text>
+                    {meals[selectedDay][meal.key] && (
+                      <View style={styles.filledBadge}>
+                        <Text style={styles.filledBadgeText}>Filled</Text>
+                      </View>
+                    )}
+                  </View>
+                  <TextInput
+                    style={styles.input}
+                    multiline
+                    numberOfLines={4}
+                    value={meals[selectedDay][meal.key]}
+                    onChangeText={(t) => updateMealField(selectedDay, meal.key, t)}
+                    placeholder={`Enter ${meal.label.toLowerCase()} menu items...`}
+                    placeholderTextColor={COLORS.gray300}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Modal Footer */}
+            <View style={styles.modalFooter}>
+              <TouchableOpacity 
+                style={styles.modalCancelButton} 
+                onPress={closeDayModal}
+              >
+                <Text style={styles.modalCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.modalDoneButton} 
+                onPress={closeDayModal}
+              >
+                <Text style={styles.modalDoneButtonText}>Done</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: COLORS.background,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#FFF8F0",
-  },
-  loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#8B4513",
-  },
+  
+  // Header
   header: {
-    backgroundColor: "#FF8C42", // Orange
+    backgroundColor: "#FF8C42",
     padding: 20,
     paddingTop: 40,
     borderBottomLeftRadius: 20,
     borderBottomRightRadius: 20,
     marginBottom: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 5,
   },
   headerTitle: {
     fontSize: 28,
@@ -292,241 +306,235 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
 
-  // ScrollView content container (used by MenuEditor)
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+  // Content
+  content: {
+    padding: SPACING.lg,
   },
 
-  // Re-used admin badge naming from borders.tsx (keeps compatibility if used)
-  adminBadge: {
-    backgroundColor: "#FF8C42",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
+  // Days Grid
+  daysGrid: {
+    gap: SPACING.md,
+    marginBottom: SPACING.lg,
   },
-  adminBadgeText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "bold",
+  dayCard: {
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    ...SHADOWS.medium,
   },
-
-  // Menu-specific / accordion items: styled to match card-like appearance
-  dayAccordion: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 12,
-    marginBottom: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
-    elevation: 2,
-    overflow: "hidden",
-  },
-  dayHeader: {
+  dayCardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: 6,
-    paddingHorizontal: 4,
+    marginBottom: SPACING.sm,
   },
-  dayHeaderText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#8B4513",
+  dayShort: {
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.primary,
+    letterSpacing: 1,
   },
-  dayExpandIcon: {
-    fontSize: 16,
-    color: "#8B4513",
-    fontWeight: "700",
-    paddingHorizontal: 8,
+  statusIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.gray200,
   },
-  dayContent: {
-    paddingTop: 10,
-    backgroundColor: "transparent",
+  statusComplete: {
+    backgroundColor: COLORS.success,
   },
-
-  // Meal rows
-  mealContainer: {
-    marginBottom: 12,
+  statusPartial: {
+    backgroundColor: COLORS.warning,
   },
-  mealHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
+  dayLabel: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textPrimary,
+    marginBottom: SPACING.sm,
   },
-  mealIcon: {
-    fontSize: 18,
-    marginRight: 8,
+  progressBar: {
+    height: 6,
+    backgroundColor: COLORS.gray100,
+    borderRadius: BORDER_RADIUS.full,
+    overflow: "hidden",
+    marginBottom: SPACING.xs,
   },
-  mealLabel: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#5A3E2B",
+  progressFill: {
+    height: "100%",
+    backgroundColor: COLORS.primary,
+    borderRadius: BORDER_RADIUS.full,
   },
-
-  // Input styling aligned with borders.tsx palette
-  input: {
-    borderWidth: 1,
-    borderColor: "#E0D6C9",
-    padding: 12,
-    borderRadius: 12,
-    fontSize: 14,
-    backgroundColor: "#F9F5F0",
-    // minHeight: 60,
-    textAlignVertical: "top",
-    color: "#5A3E2B",
+  statusText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.textTertiary,
+    fontWeight: FONT_WEIGHTS.medium,
   },
 
-  // Save button mirrors roleButton / promote styles from borders.tsx but full width
+  // Save Button
   saveButton: {
-    backgroundColor: "#5A3E2B",
-    padding: 14,
-    borderRadius: 12,
+    backgroundColor: COLORS.textPrimary,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: "center",
-    marginTop: 12,
+    marginBottom: SPACING.lg,
+    ...SHADOWS.medium,
   },
-  saveButtonSuccess: {
-    backgroundColor: "#5A3E2B",
-  },
-  buttonContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semibold,
   },
 
-  // Keep extra utility styles from borders.tsx for compatibility
-  blockedUserCard: {
-    backgroundColor: "#FFF5F5",
+  // Info Card
+  infoCard: {
+    backgroundColor: COLORS.surfaceLight,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: SPACING.md,
     borderLeftWidth: 4,
-    borderLeftColor: "#FECACA",
+    borderLeftColor: COLORS.info,
   },
-  userInfo: {
-    flex: 1,
-    marginRight: 12,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    flexWrap: "wrap",
-  },
-  userName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#8B4513",
-    marginRight: 8,
-  },
-
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 6,
-  },
-  detailIcon: {
-    marginRight: 8,
-    width: 20,
-  },
-  detailText: {
-    fontSize: 14,
-    color: "#5A3E2B",
-  },
-
-  statusContainer: {
-    flexDirection: "row",
-    marginTop: 12,
-    gap: 8,
-  },
-  statusButton: {
-    borderWidth: 1,
-    borderColor: "#E0D6C9",
-    borderRadius: 20,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#F9F5F0",
-  },
-  activeStatusButton: {
-    backgroundColor: "#C6F6D5",
-    borderColor: "#34D399",
-  },
-  blockedStatusButton: {
-    backgroundColor: "#FECACA",
-    borderColor: "#F87171",
-  },
-  statusButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#5A3E2B",
-  },
-  activeStatusButtonText: {
-    color: "#065F46",
-  },
-  blockedStatusButtonText: {
-    color: "#B91C1C",
-  },
-
-  buttonGroup: {
-    justifyContent: "space-between",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  roleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  promoteButton: {
-    backgroundColor: "#3B82F6",
-  },
-  demoteButton: {
-    backgroundColor: "#FF8C42",
-  },
-  roleButtonText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  deleteButton: {
-    backgroundColor: "#DC2626",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  deleteButtonText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-
-  emptyContainer: {
-    flex: 1,
+  infoIconContainer: {
+    width: 24,
+    height: 24,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.info,
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+  infoIconText: {
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
   },
-  emptyText: {
-    fontSize: 18,
-    color: "#8B4513",
-    textAlign: "center",
+  infoText: {
+    flex: 1,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    lineHeight: 20,
   },
-  successIcon: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+  },
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  modalContent: {
+    backgroundColor: COLORS.surface,
+    borderTopLeftRadius: BORDER_RADIUS.xl,
+    borderTopRightRadius: BORDER_RADIUS.xl,
+    maxHeight: "90%",
+    ...SHADOWS.large,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    padding: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.borderLight,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textTertiary,
+    marginTop: SPACING.xs,
+  },
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.gray100,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  closeButtonText: {
+    fontSize: FONT_SIZES.xl,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+  modalBody: {
+    padding: SPACING.lg,
+    maxHeight: 500,
+  },
+  mealSection: {
+    marginBottom: SPACING.lg,
+  },
+  mealLabelContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: SPACING.sm,
+  },
+  mealLabel: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textPrimary,
+  },
+  filledBadge: {
+    backgroundColor: COLORS.successLight,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: BORDER_RADIUS.full,
+  },
+  filledBadgeText: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.success,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    fontSize: FONT_SIZES.md,
+    backgroundColor: COLORS.surface,
+    minHeight: 50,
+    textAlignVertical: "top",
+    color: COLORS.textPrimary,
+  },
+  modalFooter: {
+    flexDirection: "row",
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderLight,
+  },
+  modalCancelButton: {
+    flex: 1,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.gray100,
+    alignItems: "center",
+  },
+  modalCancelButtonText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textSecondary,
+  },
+  modalDoneButton: {
+    flex: 1,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+  },
+  modalDoneButtonText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textLight,
   },
 });

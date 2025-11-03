@@ -3,6 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import {
+  sendPasswordResetEmail,
   signInWithEmailAndPassword
 } from "firebase/auth";
 import { get, ref } from "firebase/database";
@@ -262,6 +263,10 @@ export default function LoginScreen() {
                     }
 
                     try {
+                      await sendPasswordResetEmail(auth, resetEmail);
+                      setShowForgotModal(false);
+                      setResetEmail("");
+                      Alert.alert("Success", "Password reset email sent! Check your inbox.");
                     } catch (error: any) {
                       Alert.alert("Error", "Failed to send reset email.");
                     }
