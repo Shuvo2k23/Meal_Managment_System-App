@@ -1,13 +1,16 @@
+import { BORDER_RADIUS, COLORS, FONT_SIZES, FONT_WEIGHTS, SHADOWS, SPACING } from "@/app/constants/theme";
 import { db } from "@/firebaseConfig";
 import { router } from "expo-router";
 import { onValue, ref, remove, set } from "firebase/database";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   FlatList,
+  RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
@@ -15,8 +18,9 @@ import {
 export default function Borders() {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
+  const fetchUsers = () => {
     const usersRef = ref(db, "users/");
     const unsubscribe = onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
@@ -30,8 +34,26 @@ export default function Borders() {
       setIsLoading(false);
     });
 
+    return unsubscribe;
+  };
+
+  useEffect(() => {
+    const unsubscribe = fetchUsers();
     return () => unsubscribe();
   }, []);
+
+  // Filter users based on search query
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return users;
+    
+    const query = searchQuery.toLowerCase();
+    return users.filter((user: any) => 
+      user.name?.toLowerCase().includes(query) ||
+      user.email?.toLowerCase().includes(query) ||
+      user.phone?.includes(query) ||
+      user.room?.toString().includes(query)
+    );
+  }, [users, searchQuery]);
 
   const handleDelete = (uid: any, name: string) => {
     Alert.alert(
@@ -89,6 +111,10 @@ export default function Borders() {
         },
       ]
     );
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
   };
 
   const renderItem = ({ item }: { item: any }) => (
@@ -201,7 +227,7 @@ export default function Borders() {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF8C42" />
+        <ActivityIndicator size="large" color={COLORS.primary} />
         <Text style={styles.loadingText}>Loading users...</Text>
       </View>
     );
@@ -214,18 +240,68 @@ export default function Borders() {
         <Text style={styles.headerSubtitle}>Manage all users in the system</Text>
       </View>
 
-      {users.length === 0 ? (
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchBar}>
+          <Text style={styles.searchIcon}>🔍</Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, email, phone, or room..."
+            placeholderTextColor={COLORS.gray300}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearButton}>
+              <Text style={styles.clearButtonText}>✕</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+        
+        {/* Results Count */}
+        {searchQuery.length > 0 && (
+          <View style={styles.resultsContainer}>
+            <Text style={styles.resultsText}>
+              Found {filteredUsers.length} {filteredUsers.length === 1 ? 'user' : 'users'}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {filteredUsers.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyIcon}>👥</Text>
-          <Text style={styles.emptyText}>No users found</Text>
+          <Text style={styles.emptyIcon}>
+            {searchQuery ? "🔍" : "👥"}
+          </Text>
+          <Text style={styles.emptyText}>
+            {searchQuery ? "No users found matching your search" : "No users found"}
+          </Text>
+          {searchQuery && (
+            <TouchableOpacity onPress={clearSearch} style={styles.clearSearchButton}>
+              <Text style={styles.clearSearchButtonText}>Clear Search</Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <FlatList
-          data={users}
+          data={filteredUsers}
           keyExtractor={(item) => item.uid}
           renderItem={renderItem}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isLoading}
+              onRefresh={() => {
+                setIsLoading(true);
+                fetchUsers();
+              }}
+              colors={[COLORS.primary]}
+              tintColor={COLORS.primary}
+            />
+          }
         />
       )}
     </View>
@@ -235,99 +311,146 @@ export default function Borders() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#FFF8F0",
+    backgroundColor: COLORS.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#FFF8F0",
+    backgroundColor: COLORS.background,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: "#8B4513",
+    marginTop: SPACING.lg,
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.textSecondary,
   },
   header: {
-    backgroundColor: "#FF8C42",
-    padding: 20,
-    paddingTop: 40,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    marginBottom: 20,
+    backgroundColor: COLORS.primary,
+    padding: SPACING.xl,
+    paddingTop: 50,
+    borderBottomLeftRadius: BORDER_RADIUS.xl,
+    borderBottomRightRadius: BORDER_RADIUS.xl,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: "#FFF",
+    fontSize: FONT_SIZES.huge,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textLight,
     textAlign: "center",
-    marginBottom: 5,
+    marginBottom: SPACING.xs,
   },
   headerSubtitle: {
-    fontSize: 16,
-    color: "#FFF",
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.textLight,
     textAlign: "center",
     opacity: 0.9,
   },
+
+  // Search Bar Styles
+  searchContainer: {
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.lg,
+    paddingBottom: SPACING.sm,
+  },
+  searchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.md,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    ...SHADOWS.small,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  searchIcon: {
+    fontSize: FONT_SIZES.lg,
+    marginRight: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textPrimary,
+    paddingVertical: SPACING.xs,
+  },
+  clearButton: {
+    width: 24,
+    height: 24,
+    borderRadius: BORDER_RADIUS.full,
+    backgroundColor: COLORS.gray200,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: SPACING.sm,
+  },
+  clearButtonText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textSecondary,
+    fontWeight: FONT_WEIGHTS.bold,
+  },
+  resultsContainer: {
+    marginTop: SPACING.sm,
+    paddingHorizontal: SPACING.xs,
+  },
+  resultsText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.textTertiary,
+    fontWeight: FONT_WEIGHTS.medium,
+  },
+
   listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 20,
+    paddingHorizontal: SPACING.lg,
+    paddingBottom: SPACING.xl,
   },
   userCard: {
-    backgroundColor: "#FFFFFF",
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
+    backgroundColor: COLORS.surface,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
     flexDirection: "row",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    ...SHADOWS.medium,
   },
   blockedUserCard: {
     backgroundColor: "#FFF5F5",
     borderLeftWidth: 4,
-    borderLeftColor: "#FECACA",
+    borderLeftColor: COLORS.errorLight,
   },
   userInfo: {
     flex: 1,
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   nameRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
     flexWrap: "wrap",
   },
   userName: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#8B4513",
-    marginRight: 8,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: FONT_WEIGHTS.bold,
+    color: COLORS.textPrimary,
+    marginRight: SPACING.sm,
   },
   adminBadge: {
-    backgroundColor: "#FF8C42",
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    borderRadius: 12,
-    marginRight: 8,
+    borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.sm,
   },
   adminBadgeText: {
-    color: "#FFF",
-    fontSize: 10,
-    fontWeight: "bold",
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   blockedBadge: {
-    backgroundColor: "#FECACA",
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.errorLight,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.md,
   },
   blockedBadgeText: {
-    color: "#DC2626",
-    fontSize: 10,
-    fontWeight: "bold",
+    color: COLORS.error,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   detailRow: {
     flexDirection: "row",
@@ -335,107 +458,107 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   detailIcon: {
-    marginRight: 8,
+    marginRight: SPACING.sm,
     width: 20,
   },
   detailText: {
-    fontSize: 14,
-    color: "#5A3E2B",
+    fontSize: FONT_SIZES.md,
+    color: COLORS.textSecondary,
   },
   statusContainer: {
     flexDirection: "row",
-    marginTop: 12,
-    gap: 8,
+    marginTop: SPACING.md,
+    gap: SPACING.sm,
   },
   statusButton: {
     borderWidth: 1,
-    borderColor: "#E0D6C9",
-    borderRadius: 20,
+    borderColor: COLORS.border,
+    borderRadius: BORDER_RADIUS.xl,
     paddingVertical: 6,
-    paddingHorizontal: 12,
-    backgroundColor: "#F9F5F0",
+    paddingHorizontal: SPACING.md,
+    backgroundColor: COLORS.surfaceLight,
   },
   activeStatusButton: {
-    backgroundColor: "#C6F6D5",
-    borderColor: "#34D399",
+    backgroundColor: COLORS.successLight,
+    borderColor: COLORS.success,
   },
   blockedStatusButton: {
-    backgroundColor: "#FECACA",
-    borderColor: "#F87171",
+    backgroundColor: COLORS.errorLight,
+    borderColor: COLORS.error,
   },
   statusButtonText: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "#5A3E2B",
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.semibold,
+    color: COLORS.textSecondary,
   },
   activeStatusButtonText: {
-    color: "#065F46",
+    color: COLORS.success,
   },
   blockedStatusButtonText: {
-    color: "#B91C1C",
+    color: COLORS.error,
   },
   buttonGroup: {
     justifyContent: "space-between",
     alignItems: "flex-end",
-    gap: 8,
+    gap: SPACING.sm,
   },
   roleButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
     minWidth: 80,
     alignItems: "center",
   },
   promoteButton: {
-    backgroundColor: "#3B82F6",
+    backgroundColor: COLORS.info,
   },
   demoteButton: {
-    backgroundColor: "#FF8C42",
+    backgroundColor: COLORS.primary,
   },
   roleButtonText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
-  },
-  editButton: {
-    backgroundColor: "#3B82F6",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    minWidth: 80,
-    alignItems: "center",
-  },
-  editButtonText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   deleteButton: {
-    backgroundColor: "#DC2626",
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.error,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.md,
+    borderRadius: BORDER_RADIUS.sm,
     minWidth: 80,
     alignItems: "center",
   },
   deleteButtonText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "bold",
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: FONT_WEIGHTS.bold,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 40,
+    padding: SPACING.xxxl,
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
   },
   emptyText: {
-    fontSize: 18,
-    color: "#8B4513",
+    fontSize: FONT_SIZES.xl,
+    color: COLORS.textSecondary,
     textAlign: "center",
+    marginBottom: SPACING.md,
+  },
+  clearSearchButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.xl,
+    borderRadius: BORDER_RADIUS.md,
+    marginTop: SPACING.md,
+  },
+  clearSearchButtonText: {
+    color: COLORS.textLight,
+    fontSize: FONT_SIZES.md,
+    fontWeight: FONT_WEIGHTS.semibold,
   },
 });

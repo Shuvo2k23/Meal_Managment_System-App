@@ -13,7 +13,7 @@ import {
 } from "react-native";
 
 export default function DepositComponent() {
-  const [users, setUsers] = useState<{ uid: string; name: string }[]>([]);
+  const [users, setUsers] = useState<{ uid: string; name: string; room: string }[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -27,6 +27,7 @@ export default function DepositComponent() {
         const list = Object.entries(data).map(([uid, value]: any) => ({
           uid,
           name: value.name,
+          room: value.room || "N/A",
         }));
         setUsers(list);
       }
@@ -108,7 +109,7 @@ export default function DepositComponent() {
           >
             <Picker.Item label="-- Select User --" value="" />
             {users.map((user) => (
-              <Picker.Item key={user.uid} label={user.name} value={user.uid} />
+              <Picker.Item key={user.uid} label={`${user.name} - Room: ${user.room}`} value={user.uid} />
             ))}
           </Picker>
         </View>
@@ -147,14 +148,6 @@ export default function DepositComponent() {
             <Text style={styles.depositButtonText}>Process Deposit</Text>
           )}
         </TouchableOpacity>
-
-        {selectedUser && amount && !isNaN(Number(amount)) && (
-          <View style={styles.previewContainer}>
-            <Text style={styles.previewText}>
-              {selectedUserName} will receive ৳{Number(amount).toLocaleString()}
-            </Text>
-          </View>
-        )}
       </View>
     </View>
   );
@@ -248,16 +241,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
-  },
-  previewContainer: {
-    marginTop: 16,
-    padding: 12,
-    backgroundColor: "#d1e7dd",
-    borderRadius: 8,
-  },
-  previewText: {
-    color: "#0f5132",
-    fontWeight: "500",
-    textAlign: "center",
   },
 });

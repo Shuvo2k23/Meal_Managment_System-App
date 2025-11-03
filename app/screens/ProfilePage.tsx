@@ -7,11 +7,12 @@ import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
 
 type UserData = {
@@ -29,9 +30,13 @@ export default function Details({ moderator }: { moderator?: string }) {
   const [isLoading, setIsLoading] = useState(true);
   const currentUser = auth.currentUser;
 
-  useEffect(() => {
-    if (!currentUser) return;
+  const fetchUserData = () => {
+    if (!currentUser) {
+      setIsLoading(false);
+      return;
+    }
 
+    setIsLoading(true);
     const userRef = ref(db, "users/" + currentUser.uid);
 
     const unsubscribe = onValue(userRef, (snapshot) => {
@@ -41,33 +46,33 @@ export default function Details({ moderator }: { moderator?: string }) {
     });
 
     return () => unsubscribe();
+  };
+
+  useEffect(() => {
+    fetchUserData();
   }, []);
 
   const handleLogout = () => {
-    Alert.alert(
-      "Confirm Logout",
-      "Are you sure you want to logout?",
-      [
-        {
-          text: "Cancel",
-          style: "cancel"
+    Alert.alert("Confirm Logout", "Are you sure you want to logout?", [
+      {
+        text: "Cancel",
+        style: "cancel",
+      },
+      {
+        text: "Logout",
+        onPress: async () => {
+          try {
+            // Clear admin login mode preference
+            await AsyncStorage.removeItem("adminLoginMode");
+            await signOut(auth);
+            router.replace("/auth/login");
+          } catch (error: any) {
+            Alert.alert("Logout Failed", error.message);
+          }
         },
-        { 
-          text: "Logout", 
-          onPress: async () => {
-            try {
-              // Clear admin login mode preference
-              await AsyncStorage.removeItem('adminLoginMode');
-              await signOut(auth);
-              router.replace("/auth/login");
-            } catch (error: any) {
-              Alert.alert("Logout Failed", error.message);
-            }
-          },
-          style: "destructive"
-        }
-      ]
-    );
+        style: "destructive",
+      },
+    ]);
   };
 
   if (isLoading) {
@@ -83,7 +88,10 @@ export default function Details({ moderator }: { moderator?: string }) {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>Failed to load profile data.</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => router.replace("/user/(tabs)")}>
+        <TouchableOpacity
+          style={styles.retryButton}
+          onPress={() => router.replace("/user/(tabs)")}
+        >
           <Text style={styles.retryButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -91,7 +99,20 @@ export default function Details({ moderator }: { moderator?: string }) {
   }
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      refreshControl={
+        <RefreshControl
+          refreshing={isLoading}
+          onRefresh={() => {
+            fetchUserData();
+          }}
+          colors={["#FF8C42"]}
+          tintColor="#FF8C42"
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile Details</Text>
@@ -103,31 +124,33 @@ export default function Details({ moderator }: { moderator?: string }) {
         <View style={styles.profileIcon}>
           <Text style={styles.profileIconText}>{userData.name.charAt(0)}</Text>
         </View>
-        
+
         <Text style={styles.userName}>{userData.name}</Text>
         <Text style={styles.userRole}>{userData.role.toUpperCase()}</Text>
-        
+
         <View style={styles.divider} />
-        
+
         {/* User Details */}
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Email Address</Text>
           <Text style={styles.detailValue}>{userData.email}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Phone Number</Text>
           <Text style={styles.detailValue}>{userData.phone}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Room Number</Text>
           <Text style={styles.detailValue}>{userData.room}</Text>
         </View>
-        
+
         <View style={styles.detailItem}>
           <Text style={styles.detailLabel}>Account Balance</Text>
-          <Text style={[styles.detailValue, styles.balanceValue]}>৳ {userData.balance.toFixed(2)}</Text>
+          <Text style={[styles.detailValue, styles.balanceValue]}>
+            ৳ {userData.balance.toFixed(2)}
+          </Text>
         </View>
       </View>
 
@@ -151,7 +174,7 @@ export default function Details({ moderator }: { moderator?: string }) {
         >
           <Text style={styles.editButtonText}>Edit Profile</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Logout</Text>
         </TouchableOpacity>

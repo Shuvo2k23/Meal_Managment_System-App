@@ -3,10 +3,11 @@ import MenuBox from "@/app/components/MenuBox";
 import { useNotifications } from "@/app/hooks/useNotificaions";
 import { auth, db } from "@/firebaseConfig";
 import { onValue, ref, set } from "firebase/database";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Animated,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,16 +20,17 @@ export default function Index() {
   const [notice, setNotice] = useState("");
   const [showNotice, setShowNotice] = useState(false);
   const [isNoticeExpanded, setIsNoticeExpanded] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0); // Key to force re-render child components
   const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
     notificationHandler();
     Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 500,
-          useNativeDriver: true,
-        }).start();
-     
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
   }, [permissionStatus]);
 
   const toggleNoticeExpansion = () => {
@@ -87,21 +89,57 @@ export default function Index() {
     }
   };
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    
+    // Force re-render of child components by changing key
+    setRefreshKey((prev) => prev + 1);
+    
+    // Re-fetch notice data
+    notificationHandler();
+    
+    // Reset fade animation
+    fadeAnim.setValue(0);
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+
+    // Simulate refresh delay (can be removed if data loads instantly)
+    setTimeout(() => {
+      setRefreshing(false);
+    }, 1000);
+  }, []);
+
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={["#FF8C42"]} // Android
+          tintColor="#FF8C42" // iOS
+          title="Pull to refresh"
+          titleColor="#8B4513"
+        />
+      }
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Meal Manager</Text>
         <Text style={styles.headerSubtitle}>User Dashboard</Text>
       </View>
 
-      {/* Menu Box */}
+      {/* Menu Box - Pass key to force re-render */}
       <View style={styles.section}>
-        <MenuBox />
+        <MenuBox key={`menu-${refreshKey}`} />
       </View>
-      <MealSelector />
 
-      
+      {/* Meal Selector - Pass key to force re-render */}
+      <MealSelector key={`meal-${refreshKey}`} />
+
       {showNotice && (
         <Animated.View style={[styles.noticeBox, { opacity: fadeAnim }]}>
           <TouchableOpacity onPress={toggleNoticeExpansion} activeOpacity={0.7}>

@@ -103,6 +103,20 @@ export default function MealSelector() {
     return now.getTime() <= deadline.getTime();
   };
 
+  // ✅ Format deadline time
+  const formatDeadlineTime = (): string => {
+    if (!mealDeadline) return "Loading...";
+    
+    const deadline = new Date();
+    deadline.setHours(mealDeadline.hour, mealDeadline.minute, 0, 0);
+    
+    return deadline.toLocaleString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  };
+
   const toggleMeal = (key: "breakfast" | "lunch" | "dinner") => {
     if (status === "blocked") {
       Alert.alert("You are blocked", "Contact the Manager for more information");
@@ -155,29 +169,48 @@ export default function MealSelector() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerText}>Select Meals</Text>
-        <TouchableOpacity 
-          style={styles.balanceContainer}
-          onPress={() => {
-            setUser({ ...user, loading: true });
-            fetchUserData();
-          }}
-        >
+        <View style={styles.balanceContainer}>
           <Text style={styles.balanceText}>
             {user?.loading ? "Loading..." : `Balance: ৳${user?.balance?.toFixed(2) || "0.00"}`}
           </Text>
-        </TouchableOpacity>
+        </View>
       </View>
-      <Text style={styles.dateText}>
-        For{" "}
-        {new Date(
-          new Date(mealDate).getTime() + 24 * 60 * 60 * 1000
-        ).toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        })}
-      </Text>
+
+      {/* Date and Deadline Info */}
+      <View style={styles.dateDeadlineContainer}>
+        <View style={styles.dateSection}>
+          <Text style={styles.dateLabel}>Meal Date</Text>
+          <Text style={styles.dateValue}>
+            {new Date(
+              new Date(mealDate).getTime() + 24 * 60 * 60 * 1000
+            ).toLocaleDateString("en-US", {
+              weekday: "long",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </Text>
+        </View>
+        
+        <View style={styles.divider} />
+        
+        <View style={styles.deadlineSection}>
+          <View style={styles.deadlineHeader}>
+            <Text style={styles.deadlineIcon}>⏰</Text>
+            <Text style={styles.deadlineLabel}>Last Time</Text>
+          </View>
+          <Text style={[
+            styles.deadlineValue,
+            !isBeforeDeadline() && styles.deadlineExpired
+          ]}>
+            {formatDeadlineTime()}
+          </Text>
+          {!isBeforeDeadline() && (
+            <Text style={styles.expiredText}>Time Expired</Text>
+          )}
+        </View>
+      </View>
+
       <View style={styles.mealSelectionBox}>
         <View style={styles.mealRow}>
           <TouchableOpacity
@@ -253,26 +286,81 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   balanceContainer: {
-    backgroundColor: "#e9ecef",
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    backgroundColor: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 16,
   },
   balanceText: {
     fontSize: 14,
+    fontWeight: "600",
+    color: "#FF8C42",
+  },
+  dateDeadlineContainer: {
+    backgroundColor: "#FFF8F0",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E0D6C9",
+  },
+  dateSection: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 11,
+    color: "#8B4513",
     fontWeight: "500",
-    color: "#495057",
+    marginBottom: 2,
+  },
+  dateValue: {
+    fontSize: 13,
+    color: "#5A3E2B",
+    fontWeight: "600",
+  },
+  divider: {
+    width: 1,
+    height: 30,
+    backgroundColor: "#E0D6C9",
+    marginHorizontal: 10,
+  },
+  deadlineSection: {
+    flex: 1,
+    alignItems: "flex-end",
+  },
+  deadlineHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  deadlineIcon: {
+    fontSize: 12,
+    marginRight: 3,
+  },
+  deadlineLabel: {
+    fontSize: 11,
+    color: "#8B4513",
+    fontWeight: "500",
+  },
+  deadlineValue: {
+    fontSize: 13,
+    color: "#FF8C42",
+    fontWeight: "700",
+  },
+  deadlineExpired: {
+    color: "#DC2626",
+  },
+  expiredText: {
+    fontSize: 9,
+    color: "#DC2626",
+    fontWeight: "600",
+    marginTop: 1,
   },
   mealSelectionBox: {
     backgroundColor: "#fff",
     padding: 16,
-    margin: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
   },
   mealRow: {
     marginBottom: 12,
@@ -289,7 +377,8 @@ const styles = StyleSheet.create({
   },
   mealButtonSelected: {
     backgroundColor: "#FFE3B8",
-    borderColor: "#FFF9E9",
+    borderColor: "#FF8C42",
+    borderWidth: 2,
   },
   mealButtonText: {
     fontSize: 16,
@@ -305,12 +394,5 @@ const styles = StyleSheet.create({
   },
   mealIcon: {
     fontSize: 24,
-  },
-  dateText: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 0,
-    color: "#6c757d",
-    fontSize: 14,
   },
 });

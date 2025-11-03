@@ -1,13 +1,9 @@
-import { useRouter } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import {
-  Animated,
-  Easing,
-  Image,
-  StyleSheet,
-  Text,
-  View
-} from 'react-native';
+import { auth, db } from "@/firebaseConfig";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useRouter } from "expo-router";
+import { get, ref } from "firebase/database";
+import { useEffect, useRef } from "react";
+import { Animated, Easing, Image, StyleSheet, Text, View } from "react-native";
 
 export default function Index() {
   const router = useRouter();
@@ -34,56 +30,93 @@ export default function Index() {
         duration: 1000,
         easing: Easing.elastic(1),
         useNativeDriver: true,
-      })
+      }),
     ]).start();
 
-     const timer = setTimeout(() => {
-      router.replace('/auth/login');
-    }, 1000);
+    const timer = setTimeout(() => {
+        const checkAuth = async () => {
+          const user = auth.currentUser;
+          if (user) {
+            // User is signed in, check role and navigate
+            try {
+              const snapshot = await get(ref(db, "users/" + user.uid));
+              if (snapshot.exists()) {
+                const data = snapshot.val();
+                if (data.role === "admin") {
+                  // Check stored preference for admin
+                  const storedMode = await AsyncStorage.getItem('adminLoginMode');
+                  if (storedMode === 'user') {
+                    router.replace("/user/(tabs)");
+                  } else if (storedMode === 'admin') {
+                    // Default to admin if no preference or preference is admin
+                    router.replace("/admin/(tabs)");
+                  }
+                } else {
+                  router.replace("/user/(tabs)");
+                }
+              } else {
+                // No user data, sign out and go to login
+                await auth.signOut();
+                router.replace("/auth/login");
+              }
+            } catch (error) {
+              console.error("Error fetching user data:", error);
+              await auth.signOut();
+              router.replace("/auth/login");
+            }
+          } else {
+            // No user signed in, go to login
+            router.replace("/auth/login");
+          }
+        };
+
+        checkAuth();
+      
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
 
   return (
     <View style={styles.container}>
-      <Animated.View 
+      <Animated.View
         style={[
           styles.header,
           {
             opacity: fadeAnim,
-            transform: [{ translateY: slideAnim }]
-          }
+            transform: [{ translateY: slideAnim }],
+          },
         ]}
       >
         <Text style={styles.title}>Meal Manager</Text>
         <Text style={styles.subtitle}>Simplify Your Meal Planning</Text>
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={[
           styles.imageContainer,
           {
             opacity: fadeAnim,
-            transform: [{ scale: scaleAnim }]
-          }
+            transform: [{ scale: scaleAnim }],
+          },
         ]}
       >
         <Image
-          source={require('@/assets/images/food.png')}
+          source={require("@/assets/images/food.png")}
           style={styles.image}
           resizeMode="cover"
         />
       </Animated.View>
 
-      <Animated.View 
+      <Animated.View
         style={[
           styles.message,
           {
             opacity: fadeAnim,
-          }
+          },
         ]}
       >
-        <Text style={styles.redirectText}>Redirecting to login...</Text>
+        <Text style={styles.redirectText}>Redirecting...</Text>
       </Animated.View>
     </View>
   );
@@ -92,49 +125,49 @@ export default function Index() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#FFF8F0',
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: "#FFF8F0",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 30,
   },
   title: {
     fontSize: 36,
-    fontWeight: 'bold',
-    color: '#FF8C42',
+    fontWeight: "bold",
+    color: "#FF8C42",
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 18,
-    color: '#8B4513',
-    textAlign: 'center',
+    color: "#8B4513",
+    textAlign: "center",
   },
   imageContainer: {
     width: 300,
     height: 200,
     borderRadius: 20,
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 30,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
   },
   image: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   message: {
-    alignItems: 'center',
+    alignItems: "center",
     marginTop: 20,
   },
   redirectText: {
     fontSize: 16,
-    color: '#8B4513',
-    fontStyle: 'italic',
+    color: "#8B4513",
+    fontStyle: "italic",
   },
 });
